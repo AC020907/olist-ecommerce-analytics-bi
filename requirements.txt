@@ -1,0 +1,10 @@
+# Dependencies for notebooks/01_exploratory_data_analysis.ipynb only.
+# The project's production pipeline (sql/, powerbi/) has no Python
+# dependency -- this file exists solely to reproduce the EDA notebook.
+pandas==3.0.2
+numpy==2.4.4
+matplotlib==3.10.9
+seaborn==0.13.2
+scipy==1.17.1
+notebook>=7
+ipykernel==7.3.0

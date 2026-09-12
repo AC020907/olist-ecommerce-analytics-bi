@@ -87,8 +87,8 @@ Power BI (Import mode, DAX measures, 6-page executive dashboard)
 ## Tech Stack
 
 PostgreSQL 16 · SQL (CTEs, window functions, advanced joins) · Power BI
-· DAX · Python/pandas (data profiling only, not the pipeline itself) ·
-Git
+· DAX · Python/pandas/matplotlib/seaborn/scipy (exploratory analysis
+and data-quality profiling, not the production pipeline) · Git
 
 ## Database Model
 
@@ -129,6 +129,18 @@ project is built on `customer_unique_id`.
    orphan — it didn't).
 5. **Reporting** (`sql/06_reporting_views/`) — 6 pre-validated views,
    used to cross-check every DAX measure.
+
+## Exploratory Analysis
+
+Before building the reproducible SQL transformation layer, the raw CSVs
+were explored in Python: [`notebooks/01_exploratory_data_analysis.ipynb`](notebooks/01_exploratory_data_analysis.ipynb).
+The notebook independently validates dataset structure, data quality,
+and key business patterns (including a live, measured demonstration of
+the double-counting risk described above), and explicitly maps every
+issue it finds to the SQL fix that resolves it. It's an exploration and
+validation layer, not a second pipeline — the star schema and reporting
+views above remain the single source of truth. See `requirements.txt`
+to reproduce it locally.
 
 ## SQL Analysis
 
@@ -196,9 +208,14 @@ olist-business-intelligence/
 ├── LICENSE
 ├── .gitignore
 │
+├── requirements.txt                (Python deps for notebooks/ only)
+│
 ├── data/
 │   ├── raw/                       (9 source CSVs — not committed, see data/README.md)
 │   └── README.md
+│
+├── notebooks/
+│   └── 01_exploratory_data_analysis.ipynb   (Python EDA + data-quality layer)
 │
 ├── sql/
 │   ├── 01_schema/                 (raw schema DDL: PK/FK/CHECK constraints)
