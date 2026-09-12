@@ -2,6 +2,11 @@
 # See data/README.md for the exact source and how to reproduce data/raw/.
 data/raw/*.csv
 
+# Regenerable Power BI import CSVs (58MB) -- rebuild with
+# scripts/export_model_for_powerbi.sql. Not committed for the same reason
+# as data/raw/: it's a derived artifact, not source.
+powerbi/model_export/*.csv
+
 # Python
 __pycache__/
 *.pyc
