@@ -142,3 +142,17 @@ metric.
 - 9 `order_payments` rows have `payment_value = 0` (3 `not_defined`, 6
   `voucher`) — plausible when a voucher fully covers the cost and a
   separate payment row carries the remainder.
+
+## 12. `geolocation` has whitespace and multi-state inconsistencies (Phase 4 finding)
+
+Found while building `staging.geolocation_by_zip`: one city value is
+literally `'salvador '` (trailing space) instead of `'salvador'`, and 8 of
+19,015 distinct zip prefixes have more than one `geolocation_state` value
+across their samples (e.g. prefix `02116` has both `SP` and another state
+in a handful of rows, but the overwhelming majority is `SP`).
+
+**Decision:** `staging.geolocation_by_zip` normalizes city with
+`LOWER(TRIM(...))` and resolves both city and state to the single most
+frequent (mode) value per zip prefix, so a rare bad sample can't
+overwrite the correct one — verified against prefix `02116`, which
+correctly resolves to `sao paulo` / `SP`.
