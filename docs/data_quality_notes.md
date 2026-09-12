@@ -113,6 +113,23 @@ enrichment join. Documented so the staging layer handles it explicitly
 (e.g. `COALESCE` to the state-level centroid, or leaving it `NULL` and
 noting the gap) rather than the join silently losing rows.
 
+**Follow-up (caught during a full project consistency pass):** the
+158 zip-prefix gap above was correctly handled in `dim_geography`
+itself, but `reporting.vw_customer_geography_performance` still joined
+to it with an inner `JOIN`, which silently dropped the 272 net orders
+(R$36,199.13, ~0.27% of Net Revenue) whose customer has no matching
+`dim_geography` row — exactly the "silently losing rows" failure mode
+this finding warned about. This made the view's revenue total
+disagree with the project's headline Net Revenue KPI. Fixed by
+switching to a `LEFT JOIN` with `COALESCE(..., 'Unknown')` on
+`region`/`state`, so those orders now land in an explicit `'Unknown'`
+bucket instead of vanishing — the view's total now reconciles exactly
+to Net Revenue (R$13,494,400.74). This moved SP's revenue share from
+an incorrectly-inflated 38.37% to the correct **38.27%** everywhere it
+is cited (`insights/business_insights.md` #5, `recommendations.md` #5,
+`sql/07_business_queries/04_geographic_concentration.sql`) — SP's
+dollar figure (R$5,163,819.56) was already correct and unchanged.
+
 ## 10. Logical date-ordering anomalies in `orders`
 
 Checked whether delivery milestones are ever chronologically impossible:

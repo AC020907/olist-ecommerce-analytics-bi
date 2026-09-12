@@ -95,7 +95,7 @@ that limitation is stated explicitly instead of a fabricated number.
 
 ### 5. Delivery speed and revenue are both concentrated in São Paulo — expansion should target supply, not just demand
 
-- **Insight:** SP customers generate 38.37% of revenue with 8.8-day
+- **Insight:** SP customers generate 38.27% of revenue with 8.8-day
   average delivery; RJ (13.4% of revenue) averages 15.3 days; BA (3.75%)
   averages 19.3 days. Supply is even more concentrated than demand:
   59.74% of all sellers are based in SP.
