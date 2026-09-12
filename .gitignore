@@ -1,0 +1,17 @@
+# Raw data is not committed: it's 126MB+ and publicly available on Kaggle.
+# See data/README.md for the exact source and how to reproduce data/raw/.
+data/raw/*.csv
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / editor noise
+.DS_Store
+.vscode/
+*.swp
+
+# Power BI local cache (not the .pbix itself, which we do want to version)
+*.pbix.bak
