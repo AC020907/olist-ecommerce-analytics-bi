@@ -1,5 +1,5 @@
 -- Business question: ¿Qué estados/ciudades concentran más ventas?
--- Real result: SP alone generates 38.37% of net revenue; the top 3
+-- Real result: SP alone generates 38.27% of net revenue; the top 3
 -- states (SP, RJ, MG) combine for well over half of total revenue --
 -- see insights/business_insights.md #5.
 SELECT region, state, orders, revenue, avg_delivery_days,

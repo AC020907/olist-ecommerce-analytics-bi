@@ -58,11 +58,11 @@ repeat rate is low in market terms.
 
 ## 5. São Paulo delivers in roughly half the time of the next-largest states, and concentrates both supply and demand — unequally
 
-Customers in SP generate 38.37% of total revenue with an average
+Customers in SP generate 38.27% of total revenue with an average
 delivery time of **8.8 days**; RJ (13.4% of revenue) averages 15.3
 days, and BA (3.75% of revenue) averages 19.3 days — more than double
 SP's delivery time. This lines up with the supply side: 59.74% of all
-sellers are based in SP, versus only 38.37% of revenue coming from SP
+sellers are based in SP, versus only 38.27% of revenue coming from SP
 customers — sellers are more concentrated in SP than demand is,
 meaning a majority of orders placed outside SP are shipped from a
 seller based somewhere else in the country, which is consistent with
