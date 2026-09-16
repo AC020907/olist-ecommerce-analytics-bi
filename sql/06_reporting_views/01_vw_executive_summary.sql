@@ -15,7 +15,7 @@
 
 CREATE OR REPLACE VIEW reporting.vw_executive_summary AS
 SELECT
-    COUNT(*)                                                       AS total_orders,
+    COUNT(*) FILTER (WHERE order_status NOT IN ('canceled', 'unavailable')) AS total_orders,
     COUNT(DISTINCT customer_unique_id)                                AS total_customers,
     ROUND(SUM(items_revenue) FILTER (
         WHERE order_status NOT IN ('canceled', 'unavailable')), 2)      AS net_revenue,
@@ -24,9 +24,14 @@ SELECT
         WHERE order_status NOT IN ('canceled', 'unavailable'))
         / NULLIF(COUNT(*) FILTER (
             WHERE order_status NOT IN ('canceled', 'unavailable')), 0), 2) AS avg_order_value,
-    ROUND(SUM(freight_total), 2)                                            AS total_freight,
-    ROUND(100.0 * SUM(freight_total) / NULLIF(SUM(items_revenue), 0), 2)     AS freight_pct_of_revenue,
-    ROUND(AVG(n_items), 2)                                                    AS avg_items_per_order,
+    ROUND(SUM(freight_total) FILTER (
+        WHERE order_status NOT IN ('canceled', 'unavailable')), 2)              AS total_freight,
+    ROUND(100.0 * SUM(freight_total) FILTER (
+        WHERE order_status NOT IN ('canceled', 'unavailable'))
+        / NULLIF(SUM(items_revenue) FILTER (
+            WHERE order_status NOT IN ('canceled', 'unavailable')), 0), 2)       AS freight_pct_of_revenue,
+    ROUND(AVG(n_items) FILTER (
+        WHERE order_status NOT IN ('canceled', 'unavailable')), 2)               AS avg_items_per_order,
     ROUND(AVG(delivery_days), 1)                                               AS avg_delivery_days,
     ROUND(100.0 * COUNT(*) FILTER (WHERE is_late)
         / NULLIF(COUNT(*) FILTER (WHERE has_valid_delivery_dates), 0), 2)       AS late_delivery_rate_pct,

@@ -1,4 +1,4 @@
-# Business Recommendations (Phase 10)
+# Business Recommendations
 
 Each recommendation follows: **Insight → Business Implication →
 Recommendation → Expected Impact → Metric to Monitor**. Expected impact
@@ -173,7 +173,7 @@ that limitation is stated explicitly instead of a fabricated number.
   in September-October, before partially recovering to 8.38% in
   December and 6.56% in January 2018.
 - **Business implication:** the November revenue spike (+52.06% MoM,
-  Phase 9) came at a real, measurable operational cost — delivery
+  the analysis) came at a real, measurable operational cost — delivery
   performance degraded exactly when volume peaked, which plausibly also
   degraded satisfaction for that cohort (consistent with finding #1).
 - **Recommendation:** treat November capacity (carrier allocation,

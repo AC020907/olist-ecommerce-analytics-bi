@@ -1,12 +1,3 @@
-# Raw data is not committed: it's 126MB+ and publicly available on Kaggle.
-# See data/README.md for the exact source and how to reproduce data/raw/.
-data/raw/*.csv
-
-# Regenerable Power BI import CSVs (58MB) -- rebuild with
-# scripts/export_model_for_powerbi.sql. Not committed for the same reason
-# as data/raw/: it's a derived artifact, not source.
-powerbi/model_export/*.csv
-
 # Python
 __pycache__/
 *.pyc
@@ -18,5 +9,5 @@ venv/
 .vscode/
 *.swp
 
-# Power BI local cache (not the .pbix itself, which we do want to version)
+# Power BI local cache
 *.pbix.bak

@@ -1,10 +1,10 @@
-# Business Insights (Phase 9)
+# Business Insights
 
 Every number below is a real, reproducible result from the star schema
 built in Phases 3-6 — re-run the referenced SQL to verify any of them.
 This document is insights only, per the project's methodology:
 recommendations (insight → implication → action → expected impact →
-metric to monitor) are in `insights/recommendations.md` (Phase 10).
+metric to monitor) are in `insights/recommendations.md`.
 
 ---
 

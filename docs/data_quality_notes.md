@@ -1,4 +1,4 @@
-# Data Quality Notes (Phase 1 findings)
+# Data Quality Notes
 
 These are the real findings from profiling the 9 raw CSV files directly
 (row counts, `nunique`, null counts, orphan-key checks, and order volume
@@ -72,7 +72,7 @@ chart appears — otherwise it reads as a fake collapse in sales.
   aggregated (one row per zip prefix) before being used to enrich
   `dim_customer` / `dim_seller` — see `sql/04_dimensions`.
 
-## 6. `review_id` is reused across different orders (Phase 3 finding)
+## 6. `review_id` is reused across different orders
 
 789 `review_id` values appear more than once in `order_reviews`, always
 paired with a *different* `order_id` each time (verified: zero duplicates
@@ -102,7 +102,7 @@ confirmed, not assumed — verified with a concrete example.
 plain `LEFT JOIN` to get the English category name would silently turn
 these into `NULL`.
 
-**Decision:** the cleaning layer (Phase 4) applies `COALESCE` to fall
+**Decision:** the cleaning layer applies `COALESCE` to fall
 back to the original Portuguese name (or an explicit `'other'` bucket)
 instead of losing the category.
 
@@ -146,7 +146,7 @@ batch-approval timestamps logged after the fact) but include a few large
 outliers. The 23 "delivered before shipped" cases are logically
 impossible and are a genuine source data error.
 
-**Decision:** delivery-time KPIs (Phase 6/7) are computed only where
+**Decision:** delivery-time KPIs are computed only where
 `order_delivered_customer_date >= order_delivered_carrier_date`; the 23
 excluded orders are documented here, not silently averaged into the
 metric.
@@ -160,7 +160,7 @@ metric.
   `voucher`) — plausible when a voucher fully covers the cost and a
   separate payment row carries the remainder.
 
-## 12. `geolocation` has whitespace and multi-state inconsistencies (Phase 4 finding)
+## 12. `geolocation` has whitespace and multi-state inconsistencies
 
 Found while building `staging.geolocation_by_zip`: one city value is
 literally `'salvador '` (trailing space) instead of `'salvador'`, and 8 of

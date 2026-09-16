@@ -32,6 +32,7 @@ category_reviews AS (
         SELECT DISTINCT dp.category_name_en, foi.order_id
         FROM analytics.fact_order_items foi
         JOIN analytics.dim_product dp ON dp.product_id = foi.product_id
+        WHERE foi.order_status NOT IN ('canceled', 'unavailable')
     ) co
     JOIN analytics.fact_orders fo ON fo.order_id = co.order_id
     GROUP BY co.category_name_en

@@ -27,8 +27,13 @@ seller_orders AS (
         fo.is_late,
         fo.has_valid_delivery_dates,
         fo.avg_review_score
-    FROM (SELECT DISTINCT seller_id, order_id FROM analytics.fact_order_items) foi
+    FROM (
+        SELECT DISTINCT seller_id, order_id
+        FROM analytics.fact_order_items
+        WHERE order_status NOT IN ('canceled', 'unavailable')
+    ) foi
     JOIN analytics.fact_orders fo ON fo.order_id = foi.order_id
+    WHERE fo.order_status NOT IN ('canceled', 'unavailable')
 )
 SELECT
     sr.seller_id,
