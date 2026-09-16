@@ -46,15 +46,44 @@ Power BI semantic model + DAX
 
 ## Dataset
 
-[Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
+The project uses the [Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce).
 
-The repository includes the 9 raw CSV files under `data/raw/`, sourced from the Brazilian E-Commerce Public Dataset by Olist on Kaggle.
+The repository includes the **9 original CSV files** under:
 
-The data covers orders from **2016-09-04 through 2018-10-17**.
+```text
+data/raw/
+```
 
-For time-series analysis, the reliable complete-month window used throughout the project is:
+The data contains real, anonymized commercial activity from Olist Store and covers orders placed between **2016-09-04 and 2018-10-17**.
+
+The first months of 2016 and the final months of 2018 contain limited activity. For time-series analysis, the project therefore uses the reliable complete-month window:
 
 **2017-01 through 2018-08**
+
+See [Data quality notes](docs/data_quality_notes.md) for the detailed temporal-quality assessment.
+
+### Raw files
+
+| File | Rows | Grain |
+|---|---:|---|
+| `olist_orders_dataset.csv` | 99,441 | 1 order |
+| `olist_order_items_dataset.csv` | 112,650 | 1 item within an order |
+| `olist_order_payments_dataset.csv` | 103,886 | 1 payment transaction within an order |
+| `olist_order_reviews_dataset.csv` | 99,224 | 1 review of an order |
+| `olist_customers_dataset.csv` | 99,441 | 1 order-level customer ID |
+| `olist_products_dataset.csv` | 32,951 | 1 product |
+| `olist_sellers_dataset.csv` | 3,095 | 1 seller |
+| `olist_geolocation_dataset.csv` | 1,000,163 | 1 geolocation sample per ZIP-code prefix |
+| `product_category_name_translation.csv` | 71 | 1 category translation |
+
+### Customer identity
+
+The Olist dataset contains two different customer identifiers:
+
+- `customer_id` — order-level customer identifier
+- `customer_unique_id` — persistent customer identity across orders
+
+All customer-level metrics in this project use `customer_unique_id`.
 
 ## Data model
 
@@ -150,7 +179,7 @@ The PostgreSQL pipeline is organized into separate layers:
 
 The exploratory notebook is available at:
 
-`notebooks/01_exploratory_data_analysis.ipynb`
+[`notebooks/01_exploratory_data_analysis.ipynb`](notebooks/01_exploratory_data_analysis.ipynb)
 
 The notebook is intentionally used as an independent exploration and validation layer rather than as a second production transformation pipeline.
 
@@ -164,6 +193,10 @@ PostgreSQL remains the reproducible transformation, modeling, and reporting sour
 - Python
 - Jupyter Notebook
 - Power BI Desktop
+
+Python dependencies are listed in:
+
+[`requirements.txt`](requirements.txt)
 
 The required raw CSV files are already included under:
 
@@ -200,17 +233,31 @@ psql -U postgres -d olist_analytics -f sql/03_cleaning/02_staging_geolocation.sq
 psql -U postgres -d olist_analytics -f sql/03_cleaning/03_staging_orders.sql
 ```
 
-### 5. Build dimensions, facts, and reporting views
+### 5. Build dimensions
 
 Execute the scripts in filename order from:
 
 ```text
 sql/04_dimensions/
+```
+
+### 6. Build fact tables
+
+Execute the scripts in filename order from:
+
+```text
 sql/05_facts/
+```
+
+### 7. Build reporting views
+
+Execute the scripts in filename order from:
+
+```text
 sql/06_reporting_views/
 ```
 
-### 6. Optional validation and business analysis
+### 8. Optional validation and business analysis
 
 Data-quality checks:
 
@@ -239,7 +286,15 @@ The review dataset contains UTF-8 characters that may fail under a Windows-1252 
 │   ├── raw/              # 9 original Olist CSV files
 │   └── README.md
 ├── notebooks/
+│   └── 01_exploratory_data_analysis.ipynb
 ├── sql/
+│   ├── 01_schema/
+│   ├── 02_data_quality/
+│   ├── 03_cleaning/
+│   ├── 04_dimensions/
+│   ├── 05_facts/
+│   ├── 06_reporting_views/
+│   └── 07_business_queries/
 ├── scripts/
 ├── docs/
 ├── insights/
@@ -266,12 +321,15 @@ The review dataset contains UTF-8 characters that may fail under a Windows-1252 
 
 ## Documentation
 
+- [Data README](data/README.md)
 - [Data quality notes](docs/data_quality_notes.md)
 - [Star schema design](docs/star_schema_design.md)
 - [KPI definitions](docs/kpi_definitions.md)
 - [Business insights](insights/business_insights.md)
 - [Recommendations](insights/recommendations.md)
+- [Power BI model documentation](powerbi/README.md)
+- [DAX measures](powerbi/dax_measures.md)
 
 ## License
 
-See [LICENSE](LICENSE).
+This project is distributed under the terms described in [LICENSE](LICENSE).
