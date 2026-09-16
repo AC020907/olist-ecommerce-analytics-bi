@@ -1,1 +1,0 @@
-CREATE DATABASE olist_analytics;
