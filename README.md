@@ -1,9 +1,10 @@
 # Olist Business Intelligence — E-Commerce Analytics Platform
 
-End-to-end Business Intelligence project using the Brazilian Olist e-commerce
-dataset. The solution combines Python EDA, PostgreSQL data modeling, advanced
-SQL, a fan-out-safe analytical model, DAX and a completed six-page Power BI
-dashboard.
+End-to-end Business Intelligence project built on the Brazilian Olist e-commerce dataset.
+
+The solution combines Python EDA, PostgreSQL data modeling, advanced SQL, a fan-out-safe analytical model, DAX, and a completed six-page Power BI dashboard.
+
+**Tech stack:** PostgreSQL · SQL · Python · Pandas · Jupyter · Power BI · DAX
 
 ![Executive Overview](images/Executive_overview.png)
 
@@ -19,22 +20,16 @@ dashboard.
 
 ## Executive findings
 
-- On-time orders average about **4.29** in review score versus **2.57** for late
-  deliveries when the comparison is restricted to orders with valid delivery
-  dates.
-- Repeat customers are only **3.12%** of the customer base but generate more
-  revenue per customer than one-time buyers.
-- Revenue is concentrated geographically, led by São Paulo, while delivery
-  performance and satisfaction vary materially across regions/states.
-- Product/category and seller analysis must be performed at item grain; payment
-  analysis remains at payment grain. This prevents silent double counting.
+- On-time orders average about **4.29** in review score versus **2.57** for late deliveries when the comparison is restricted to orders with valid delivery dates.
+- Repeat customers represent only **3.12%** of the customer base, but generate more revenue per customer than one-time buyers.
+- Revenue is geographically concentrated, led by São Paulo, while delivery performance and customer satisfaction vary materially across regions and states.
 
 ## Architecture
 
 ```text
 Raw Olist CSVs
    ↓
-Python / Jupyter EDA (exploration + validation)
+Python / Jupyter EDA
    ↓
 PostgreSQL raw schema
    ↓
@@ -53,26 +48,35 @@ Power BI semantic model + DAX
 
 [Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
 
-The source contains 9 CSV files covering orders from 2016-09-04 through
-2018-10-17. The reliable complete-month analysis window used for trends is
-**2017-01 through 2018-08**.
+The repository includes the 9 raw CSV files under `data/raw/`, sourced from the Brazilian E-Commerce Public Dataset by Olist on Kaggle.
+
+The data covers orders from **2016-09-04 through 2018-10-17**.
+
+For time-series analysis, the reliable complete-month window used throughout the project is:
+
+**2017-01 through 2018-08**
 
 ## Data model
 
 ### Dimensions
+
 - `dim_date`
-- `dim_geography` (customer/shipping geography role)
+- `dim_geography` — customer/shipping geography
 - `dim_customer`
 - `dim_seller`
 - `dim_product`
 
 ### Facts
+
 - `fact_orders` — one row per order
 - `fact_order_items` — one row per `(order_id, order_item_id)`
 - `fact_payments` — one row per `(order_id, payment_sequential)`
 
-The different fact grains are deliberate. One order can have multiple items and
-multiple payments; a naive item × payment join multiplies measures.
+The different fact grains are deliberate.
+
+One order can contain multiple items and multiple payment transactions. A naive item × payment join would multiply rows and silently overstate revenue, freight, and payment metrics.
+
+The semantic model therefore keeps order-, item-, and payment-level facts separate.
 
 ## Headline KPI references
 
@@ -80,24 +84,23 @@ multiple payments; a naive item × payment join multiplies measures.
 |---|---:|
 | Net Revenue | R$ 13,494,400.74 |
 | Gross Revenue | R$ 13,591,643.70 |
-| Valid Orders | 98,207 |
+| Valid Orders (excl. canceled/unavailable) | 98,207 |
 | Customers (`customer_unique_id`) | 96,096 |
 | AOV | R$ 137.41 |
-| Net Freight / Net Revenue | ~16.61% |
+| Freight as % of Net Revenue | ~16.61% |
 | Repeat Customer Rate | 3.12% |
 | Avg Review Score | ~4.09 / 5 |
 | Late Delivery Rate | ~8.11% |
 
-Dashboard cards can differ slightly where a page is intentionally filtered to
-Jan 2017 – Aug 2018.
+Dashboard cards can differ slightly where a page is intentionally filtered to the **Jan 2017 – Aug 2018** analysis window.
 
 ## Power BI dashboard
 
-The completed report is included at:
+The completed Power BI report is included in the repository:
 
-`powerbi/olist_business_intelligence.pbix`
+[Open / download the Power BI report](powerbi/olist_business_intelligence.pbix)
 
-Pages:
+### Dashboard pages
 
 1. **Executive Overview**
 2. **Sales Performance**
@@ -108,63 +111,132 @@ Pages:
 
 ### Screenshots
 
+#### Sales Performance
+
 ![Sales Performance](images/Sales_performance.png)
+
+#### Customer Analytics
+
 ![Customer Analytics](images/Customer_analytics.png)
+
+#### Product & Category Performance
+
 ![Product & Category Performance](images/Product_%26_Category_Performance.png)
+
+#### Seller Performance
+
 ![Seller Performance](images/Seller_performance.png)
+
+#### Delivery & Customer Satisfaction
+
 ![Delivery & Customer Satisfaction](images/Delivery_%26_Customer_Satisfaction.png)
 
-See:
-- `powerbi/README.md` for relationships and connection setup
-- `powerbi/dax_measures.md` for semantic-layer definitions
+Additional Power BI documentation:
+
+- [Power BI model and connection setup](powerbi/README.md)
+- [DAX measures](powerbi/dax_measures.md)
 
 ## SQL and analysis layers
 
-- `sql/01_schema/` — schemas and raw tables
-- `sql/02_data_quality/` — row counts, nulls, duplicates, referential checks
-- `sql/03_cleaning/` — staging/cleaning
-- `sql/04_dimensions/` — dimensions
-- `sql/05_facts/` — fact tables
-- `sql/06_reporting_views/` — validated reporting views
-- `sql/07_business_queries/` — business questions
-- `notebooks/01_exploratory_data_analysis.ipynb` — independent EDA / validation
+The PostgreSQL pipeline is organized into separate layers:
 
-The notebook is intentionally not a second production pipeline. PostgreSQL is
-the reproducible transformation/modeling layer and source of truth.
+- `sql/01_schema/` — schemas and raw tables
+- `sql/02_data_quality/` — row counts, null checks, duplicates, referential checks
+- `sql/03_cleaning/` — staging and cleaning logic
+- `sql/04_dimensions/` — analytical dimensions
+- `sql/05_facts/` — analytical fact tables
+- `sql/06_reporting_views/` — validated reporting views
+- `sql/07_business_queries/` — business analysis queries
+
+The exploratory notebook is available at:
+
+`notebooks/01_exploratory_data_analysis.ipynb`
+
+The notebook is intentionally used as an independent exploration and validation layer rather than as a second production transformation pipeline.
+
+PostgreSQL remains the reproducible transformation, modeling, and reporting source of truth.
 
 ## Reproduce locally
 
-Requirements: PostgreSQL, Python (for the notebook), and Power BI Desktop for
-the `.pbix`. Run from the repository root.
+### Requirements
+
+- PostgreSQL
+- Python
+- Jupyter Notebook
+- Power BI Desktop
+
+The required raw CSV files are already included under:
+
+```text
+data/raw/
+```
+
+Run the following commands from the repository root.
+
+### 1. Create the database
 
 ```powershell
 createdb olist_analytics
+```
 
+### 2. Create schemas and raw tables
+
+```powershell
 psql -U postgres -d olist_analytics -f sql/01_schema/01_create_schemas.sql
 psql -U postgres -d olist_analytics -f sql/01_schema/02_create_raw_tables.sql
-psql -U postgres -d olist_analytics -f scripts/load_raw_data.sql
+```
 
+### 3. Load raw data
+
+```powershell
+psql -U postgres -d olist_analytics -f scripts/load_raw_data.sql
+```
+
+### 4. Build the staging layer
+
+```powershell
 psql -U postgres -d olist_analytics -f sql/03_cleaning/01_staging_products.sql
 psql -U postgres -d olist_analytics -f sql/03_cleaning/02_staging_geolocation.sql
 psql -U postgres -d olist_analytics -f sql/03_cleaning/03_staging_orders.sql
-
-# Then execute sql/04_dimensions/*.sql in filename order,
-# followed by sql/05_facts/*.sql and sql/06_reporting_views/*.sql.
 ```
 
-Run `sql/02_data_quality/*.sql` for validation and
-`sql/07_business_queries/*.sql` for business analysis.
+### 5. Build dimensions, facts, and reporting views
 
-The raw review CSV contains characters that can fail under a Windows-1252
-client; `scripts/load_raw_data.sql` explicitly sets UTF-8.
+Execute the scripts in filename order from:
+
+```text
+sql/04_dimensions/
+sql/05_facts/
+sql/06_reporting_views/
+```
+
+### 6. Optional validation and business analysis
+
+Data-quality checks:
+
+```text
+sql/02_data_quality/
+```
+
+Business analysis:
+
+```text
+sql/07_business_queries/
+```
+
+The review dataset contains UTF-8 characters that may fail under a Windows-1252 PostgreSQL client configuration.
+
+`scripts/load_raw_data.sql` explicitly sets the client encoding to UTF-8 before loading the data.
 
 ## Repository structure
 
 ```text
 .
 ├── README.md
+├── LICENSE
+├── requirements.txt
 ├── data/
-│   ├── raw/
+│   ├── raw/              # 9 original Olist CSV files
 │   └── README.md
 ├── notebooks/
 ├── sql/
@@ -182,21 +254,24 @@ client; `scripts/load_raw_data.sql` explicitly sets UTF-8.
 
 - Use `customer_unique_id` for customer-level metrics.
 - Net revenue excludes `canceled` and `unavailable` orders.
-- Category and seller revenue use `fact_order_items` with the same net-order
-  filter.
-- `dim_geography` is customer geography only; seller geography comes from
-  `dim_seller`.
-- On-time/late satisfaction comparisons use only valid delivery dates.
-- Avoid fact-to-fact relationships and row-level item/payment joins.
+- Product/category analysis uses `fact_order_items`.
+- Seller analysis uses `fact_order_items`.
+- Payment analysis uses `fact_payments`.
+- `dim_geography` represents customer geography only.
+- Seller geography comes directly from `dim_seller`.
+- On-time vs late satisfaction comparisons use only orders with valid delivery dates.
+- Avoid fact-to-fact relationships.
+- Avoid row-level item/payment joins that would create fan-out.
+- Category and seller revenue use the same net-order filtering logic as the main revenue KPI.
 
 ## Documentation
 
-- `docs/data_quality_notes.md`
-- `docs/star_schema_design.md`
-- `docs/kpi_definitions.md`
-- `insights/business_insights.md`
-- `insights/recommendations.md`
+- [Data quality notes](docs/data_quality_notes.md)
+- [Star schema design](docs/star_schema_design.md)
+- [KPI definitions](docs/kpi_definitions.md)
+- [Business insights](insights/business_insights.md)
+- [Recommendations](insights/recommendations.md)
 
 ## License
 
-See `LICENSE`.
+See [LICENSE](LICENSE).
