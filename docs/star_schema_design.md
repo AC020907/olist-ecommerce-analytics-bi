@@ -1,4 +1,4 @@
-# Star Schema Design (Phase 5)
+# Star Schema Design
 
 ## Dimensions
 
@@ -32,7 +32,7 @@ trade-off explicitly is part of defending this design.
 
 `customer_id` (in `raw.customers`) is **not a person** — Olist issues a
 new one every time the same customer places a new order (verified,
-Phase 1: 99,441 `customer_id` vs. 96,096 `customer_unique_id`). Building
+profiling found 99,441 `customer_id` vs. 96,096 `customer_unique_id`). Building
 `dim_customer` at `customer_id` grain would make repeat-purchase and
 customer-value analysis meaningless. `dim_customer` is therefore built
 at `customer_unique_id` grain, one row per real person.

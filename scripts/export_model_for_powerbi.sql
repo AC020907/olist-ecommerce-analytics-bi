@@ -6,7 +6,7 @@
 -- tables change.
 --
 -- Run from the repository root:
---   psql -d olist_bi -f scripts/export_model_for_powerbi.sql
+--   psql -d olist_analytics -f scripts/export_model_for_powerbi.sql
 --
 -- The recommended path for the real, reproducible project is connecting
 -- Power BI directly to PostgreSQL (native connector, Import mode) -- see
