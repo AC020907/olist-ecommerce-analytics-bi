@@ -7,6 +7,6 @@ SELECT
     COUNT(*) AS orders,
     ROUND(AVG(avg_review_score), 2) AS avg_review_score
 FROM analytics.fact_orders
-WHERE has_valid_delivery_dates
+WHERE is_late IS NOT NULL
 GROUP BY is_late
 ORDER BY is_late;

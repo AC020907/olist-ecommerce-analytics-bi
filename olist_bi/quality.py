@@ -204,6 +204,21 @@ CHECKS: list[Check] = [
             "AND NOT (is_delivered AND has_valid_delivery_dates)",
     ),
 
+    Check(
+        name="late_flag_uses_calendar_dates",
+        category="dates",
+        description="is_late == (delivered calendar date > promised calendar date) for every measurable delivery",
+        sql="SELECT COUNT(*) FROM analytics.fact_orders f JOIN raw.orders o USING (order_id) "
+            "WHERE f.is_late IS NOT NULL AND f.is_late <> "
+            "(o.order_delivered_customer_date::date > o.order_estimated_delivery_date::date)",
+    ),
+    Check(
+        name="promised_date_is_calendar_date",
+        category="dates",
+        description="estimated delivery dates carry no time of day (justifies the calendar-date late rule)",
+        sql="SELECT COUNT(*) FROM raw.orders WHERE order_estimated_delivery_date::time <> TIME '00:00'",
+    ),
+
     _money_diff(
         "gross revenue: fact_orders (order grain) == raw.order_items (no fan-out)",
         "no_fanout_gross_revenue",

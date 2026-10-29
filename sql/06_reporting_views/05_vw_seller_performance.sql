@@ -43,7 +43,7 @@ SELECT
     ROUND(sr.revenue, 2)                                                AS revenue,
     ROUND(AVG(so.delivery_days), 1)                                       AS avg_delivery_days,
     ROUND(100.0 * COUNT(*) FILTER (WHERE so.is_late)
-        / NULLIF(COUNT(*) FILTER (WHERE so.has_valid_delivery_dates), 0), 2) AS late_delivery_rate_pct,
+        / NULLIF(COUNT(*) FILTER (WHERE so.is_late IS NOT NULL), 0), 2) AS late_delivery_rate_pct,
     ROUND(AVG(so.avg_review_score), 2)                                        AS avg_review_score
 FROM seller_revenue sr
 JOIN analytics.dim_seller ds ON ds.seller_id = sr.seller_id
