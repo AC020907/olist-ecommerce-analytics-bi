@@ -27,7 +27,7 @@ import metrics as m  # noqa: E402
 
 TABS = ["Executive overview", "Sales performance", "Delivery & satisfaction", "Business insights", "Methodology & data quality"]
 # Streamlit Community Cloud wraps the app in an iframe; this path serves the app itself.
-DIRECT_URL = f"{APP_URL}/~/+/"
+DIRECT_URL = f"{APP_URL}/~/+/" if "streamlit.app" in APP_URL else APP_URL
 
 
 @pytest.fixture(scope="module")
@@ -70,7 +70,8 @@ def assert_no_exception(page) -> None:
 
 
 def test_https_and_default_kpis(browser):
-    assert APP_URL.startswith("https://")
+    if "localhost" not in APP_URL:
+        assert APP_URL.startswith("https://")
     page = open_app(browser)
     frames = m.load_frames()
     expected = m.kpis(m.apply_filters(frames["orders"], *m.ANALYSIS_WINDOW))
@@ -103,7 +104,7 @@ def test_category_filter_changes_kpis(browser):
     page = open_app(browser)
     before = metric_value(page, "Orders")
     sidebar = page.locator('[data-testid="stSidebar"]')
-    sidebar.get_by_text("All categories").click()
+    sidebar.locator('[data-testid="stSelectbox"]').filter(has_text="Product category").locator("input").click()
     page.keyboard.type("health beauty")
     page.keyboard.press("Enter")
     frames = m.load_frames()
