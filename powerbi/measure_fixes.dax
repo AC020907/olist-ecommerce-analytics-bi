@@ -1,0 +1,59 @@
+// =============================================================================
+// measure_fixes.dax -- corrections for docs/TECHNICAL_AUDIT.md findings A-01, A-02
+//
+// The committed olist_business_intelligence.pbix diverges from the documented
+// definitions in docs/kpi_definitions.md for the measures below. Replace each
+// measure's expression in Power BI Desktop (Modeling > select measure > formula
+// bar), then save the .pbix and refresh the page screenshots.
+//
+// Verified 2026-10-29 by evaluating these exact expressions as query-scoped
+// measures against the committed model (no changes saved):
+//   Avg Review Score On-Time   4.2945   (model today: 4.2148)  SQL: 4.29
+//   Avg Review Score Late      2.5662   (unchanged)            SQL: 2.57
+//   Total Freight              2,241,126.29 (today: 2,251,909.54)  SQL: 2,241,126.29
+//   Freight % of Revenue       16.61%   (today: 16.69%)
+//   Item Revenue / Seller Rev. 13,494,400.74 (today: gross 13,591,643.70) = Net Revenue
+//   Items Sold                 112,101
+// =============================================================================
+
+// A-01 -- BLANK() = FALSE() is TRUE in DAX, so without the valid-date predicate
+// every order without a delivery outcome is counted as "on-time".
+Avg Review Score On-Time =
+CALCULATE(
+    [Avg Review Score],
+    'analytics fact_orders'[has_valid_delivery_dates] = TRUE(),
+    'analytics fact_orders'[is_late] = FALSE()
+)
+
+Avg Review Score Late =
+CALCULATE(
+    [Avg Review Score],
+    'analytics fact_orders'[has_valid_delivery_dates] = TRUE(),
+    'analytics fact_orders'[is_late] = TRUE()
+)
+
+// A-02 -- same valid-order population as [Total Revenue].
+Total Freight =
+CALCULATE(
+    SUM('analytics fact_orders'[freight_total]),
+    'analytics fact_orders'[order_status] <> "canceled",
+    'analytics fact_orders'[order_status] <> "unavailable"
+)
+
+Item Revenue =
+CALCULATE(
+    SUM('analytics fact_order_items'[price]),
+    'analytics fact_order_items'[order_status] <> "canceled",
+    'analytics fact_order_items'[order_status] <> "unavailable"
+)
+
+Items Sold =
+CALCULATE(
+    COUNTROWS('analytics fact_order_items'),
+    'analytics fact_order_items'[order_status] <> "canceled",
+    'analytics fact_order_items'[order_status] <> "unavailable"
+)
+
+Avg Item Price = DIVIDE([Item Revenue], [Items Sold])
+
+Seller Revenue = [Item Revenue]

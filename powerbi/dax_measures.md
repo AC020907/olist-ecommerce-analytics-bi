@@ -1,5 +1,11 @@
 # DAX Measure Library
 
+> **Known gap (audit 2026-10-29):** this library is the intended definition. The
+> committed `.pbix` still has older versions of `Avg Review Score On-Time/Late`,
+> `Total Freight`, `Item Revenue`, `Items Sold`, `Avg Item Price` and
+> `Seller Revenue`. Corrected, verified expressions: [`measure_fixes.dax`](measure_fixes.dax);
+> details in [docs/TECHNICAL_AUDIT.md](../docs/TECHNICAL_AUDIT.md) (A-01, A-02).
+
 This file documents the semantic-layer calculations used by the Power BI
 report. Table names match the imported model. All measures should live in a
 disconnected `_Measures` table unless otherwise stated.

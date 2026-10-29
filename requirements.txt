@@ -1,10 +1,21 @@
-# Dependencies for notebooks/01_exploratory_data_analysis.ipynb only.
-# The project's production pipeline (sql/, powerbi/) has no Python
-# dependency -- this file exists solely to reproduce the EDA notebook.
-pandas==3.0.2
-numpy==2.4.4
+# Pipeline, data-quality checks, tests and demo export
+psycopg[binary]==3.3.6
+python-dotenv==1.2.4
+pandas==3.1.0
+pyarrow==26.0.0
+pytest==9.2.0
+
+# Streamlit demo (also listed in demo/requirements.txt for Streamlit Community Cloud)
+streamlit==1.66.1
+plotly==7.1.0
+
+# Exploratory notebook (notebooks/01_exploratory_data_analysis.ipynb)
+numpy==2.5.4
 matplotlib==3.10.9
 seaborn==0.13.2
 scipy==1.17.1
 notebook>=7
 ipykernel==7.3.0
+
+# Optional, only for scripts/capture_demo_screenshots.py (uses the installed Microsoft Edge)
+# playwright==1.58.0
