@@ -102,3 +102,14 @@ def test_seller_profile_and_methodology_render():
     seller.select_index(1).run()
     assert not app.exception
     assert any(mt.label == "Passed" for mt in app.metric)
+
+
+def test_app_recovers_from_stale_metrics_module():
+    # Reproduces the Streamlit Cloud redeploy: the process keeps an older metrics module
+    # (here: missing seller_profile) while the new app.py runs.
+    import metrics
+
+    del metrics.seller_profile
+    app = run_app()
+    assert not app.exception
+    assert hasattr(metrics, "seller_profile")

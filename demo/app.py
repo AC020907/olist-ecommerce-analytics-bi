@@ -11,6 +11,7 @@ Run:  streamlit run demo/app.py
 """
 from __future__ import annotations
 
+import importlib
 import logging
 import time
 
@@ -18,7 +19,12 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-import metrics as m
+import metrics
+
+# Streamlit Community Cloud pulls new commits without restarting the Python process, so
+# a metrics module imported by the previous version would stay in memory and break the
+# new app.py. Reloading it on every script run is cheap and keeps both files in sync.
+m = importlib.reload(metrics)
 
 BLUE = "#2a78d6"
 ORANGE = "#eb6834"
