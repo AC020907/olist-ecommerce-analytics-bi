@@ -21,7 +21,7 @@ secondary transparency measure.
 | Freight % of Net Revenue | **16.61%** | Net Freight / Net Revenue |
 | Repeat Customer Rate | **3.12%** | customer-grain attribute |
 | Avg Delivery Time | ~12.6 days | valid delivery dates |
-| Late Delivery Rate | ~8.11% | valid delivery dates |
+| Late Delivery Rate | 6.77% | delivered later than the promised calendar day; delivered orders with valid dates |
 | Avg Review Score | ~4.09 | order-grain review average |
 
 ## Core DAX definitions
@@ -70,9 +70,9 @@ Avg Delivery Days = AVERAGE('analytics fact_orders'[delivery_days])
 Late Delivery % =
 DIVIDE(
     CALCULATE(COUNTROWS('analytics fact_orders'),
-              'analytics fact_orders'[is_late] = TRUE()),
+              'analytics fact_orders'[is_late] == TRUE()),
     CALCULATE(COUNTROWS('analytics fact_orders'),
-              'analytics fact_orders'[has_valid_delivery_dates] = TRUE())
+              NOT ISBLANK('analytics fact_orders'[is_late]))
 )
 
 Avg Review Score =
@@ -81,20 +81,23 @@ AVERAGE('analytics fact_orders'[avg_review_score])
 Avg Review Score On-Time =
 CALCULATE(
     [Avg Review Score],
-    'analytics fact_orders'[has_valid_delivery_dates] = TRUE(),
-    'analytics fact_orders'[is_late] = FALSE()
+    'analytics fact_orders'[is_late] == FALSE()
 )
 
 Avg Review Score Late =
 CALCULATE(
     [Avg Review Score],
-    'analytics fact_orders'[has_valid_delivery_dates] = TRUE(),
-    'analytics fact_orders'[is_late] = TRUE()
+    'analytics fact_orders'[is_late] == TRUE()
 )
 ```
 
-The explicit valid-date predicate prevents blank `is_late` rows from being
-misclassified as on-time. Reference comparison: approximately **4.29 vs 2.57**.
+`is_late` is BLANK for orders without a measurable delivery (not delivered,
+or impossible dates). In DAX `BLANK() = FALSE()` is TRUE, so the strict `==`
+operator is required to keep those orders out of the on-time average.
+`is_late` compares calendar dates: the promised date never has a time of day,
+so delivery at any hour on the promised day is on time. Reference comparison:
+**4.29 vs 2.27**. Full catalogue and three-way reconciliation:
+[`KPI_RECONCILIATION.md`](KPI_RECONCILIATION.md).
 
 ## Customer behavior
 

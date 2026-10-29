@@ -7,6 +7,7 @@
 --   - 23 orders have order_delivered_customer_date < order_delivered_carrier_date,
 --     which is logically impossible -- excluded from delivery_days/is_late
 --     rather than silently producing a negative delivery time.
+--   - is_late = delivered on a later CALENDAR DAY than the promised date.
 -- ============================================================================
 
 CREATE OR REPLACE VIEW staging.orders AS
@@ -49,7 +50,12 @@ SELECT
              AND o.order_delivered_customer_date IS NOT NULL
              AND o.order_delivered_carrier_date IS NOT NULL
              AND o.order_delivered_customer_date >= o.order_delivered_carrier_date
-        THEN (o.order_delivered_customer_date > o.order_estimated_delivery_date)
+        -- Date-level comparison: order_estimated_delivery_date is a calendar
+        -- date (all 99,441 values are at 00:00:00), so the promise is "by this
+        -- day". Comparing the delivery timestamp to midnight would flag 1,292
+        -- orders delivered ON the promised day as late (see
+        -- docs/TECHNICAL_AUDIT.md A-07 and docs/kpi_definitions.md).
+        THEN (o.order_delivered_customer_date::date > o.order_estimated_delivery_date::date)
         ELSE NULL
     END                                                          AS is_late
 

@@ -1,121 +1,110 @@
 # Business Insights
 
-Every number below is a real, reproducible result from the star schema
-built in Phases 3-6 — re-run the referenced SQL to verify any of them.
-This document is insights only, per the project's methodology:
-recommendations (insight → implication → action → expected impact →
-metric to monitor) are in `insights/recommendations.md`.
+Observed results only. Every number is reproducible from the warehouse
+(`python -m olist_bi build`) with the SQL cited under each finding.
+Explanations, hypotheses and actions are in
+[`recommendations.md`](recommendations.md).
+
+**Read these as associations.** The data is a historical, anonymized
+public sample with no experiments, costs or margins; none of the
+differences below proves that changing one factor would change the
+outcome.
+
+Definitions used throughout (see [`docs/KPI_RECONCILIATION.md`](../docs/KPI_RECONCILIATION.md)):
+net revenue = item prices on orders not `canceled`/`unavailable`;
+**late** = delivered on a later calendar day than the promised date,
+among delivered orders with valid dates (96,446 orders).
 
 ---
 
-## 1. Late deliveries are the single strongest driver of dissatisfaction found in the data
+## 1. Late orders receive much lower reviews, and the gap grows with the delay
 
-Orders delivered on time average a **4.29** review score; orders
-delivered late average **2.57** — a 1.72-point gap on a 5-point scale,
-across 7,825 late orders (8.11% of the 96,446 orders with a valid
-delivery record). No other segmentation in this project — category,
-payment method, or seller — produces a gap remotely this large,
-suggesting that delivery reliability, not product or price, is the
-primary lever on customer satisfaction in this marketplace.
+| Delivery vs. promised date | Orders | Avg review | 1–2 star reviews |
+|---|---:|---:|---:|
+| On time or early | 89,913 | 4.29 | 9.2% |
+| 1 day late | 825 | 3.73 | 19.6% |
+| 2–3 days late | 1,045 | 2.94 | 41.5% |
+| 4–7 days late | 1,801 | 2.10 | 65.6% |
+| 8–14 days late | 1,478 | 1.67 | 78.4% |
+| 15+ days late | 1,384 | 1.73 | 75.4% |
 
-*Source: `analytics.fact_orders`, grouped by `is_late`.*
+6,533 orders (6.77%) were late. The on-time vs. late gap (4.29 vs 2.27,
+2.02 points) is larger than the spread between product categories with
+500+ orders (3.62 to 4.50) or between payment methods (4.02 to 4.17).
 
-## 2. 20.9% of active sellers combine above-median revenue with below-average satisfaction
+*SQL: `07_business_queries/06_delay_vs_review_score.sql`; buckets from
+`demo/data/delivery_buckets.parquet` (`olist_bi/export_demo.py`).*
 
-639 of 3,053 sellers with at least one sale generate more than the
-median seller revenue (R$825) while scoring below the platform's
-overall average review score (4.09). This is not a marginal group —
-it's one in five active sellers — suggesting that a meaningful share of
-platform revenue currently runs through sellers whose fulfillment or
-product quality is actively working against customer retention rather
-than for it.
+## 2. Late deliveries concentrate in a few months
 
-*Source: `reporting.vw_seller_performance`, median via `PERCENTILE_CONT`.*
+The monthly late rate was 2.8–3.0% in May–Aug 2017, rose to **12.4%** in
+Nov 2017 (the month revenue grew +52.1%), and peaked at **14.1%** (Feb 2018)
+and **19.0%** (Mar 2018). It was back to 4.5% in Apr 2018.
 
-## 3. `office_furniture` generates real revenue (R$273,580.70) while scoring well below the platform average
+*SQL: `07_business_queries/05_delivery_time_and_late_rate.sql`.*
 
-Among the top-20 categories by revenue, `office_furniture` is the clear
-outlier: its 3.62 average review score sits 0.47 points below the
-platform average (4.09) and is the lowest of any category in that top
-20 — while its revenue (R$273,580.70) puts it comfortably inside the
-top half. This is the concrete answer to "which category combines high
-revenue with low satisfaction" — not a category with a marginally lower
-score, but a specific, identifiable one.
+## 3. Delivery time and late rate differ sharply by customer state
 
-*Source: `reporting.vw_category_performance`.*
+| State | Share of net revenue | Avg delivery days | Late rate | Avg review |
+|---|---:|---:|---:|---:|
+| SP | 38.3% | 8.8 | 4.5% | 4.21 |
+| RJ | 13.4% | 15.3 | 12.1% | 3.90 |
+| MG | 11.7% | 12.0 | 4.6% | 4.16 |
+| BA | 3.8% | 19.3 | 12.1% | 3.88 |
+| MA | 0.9% | 21.5 | 17.2% | 3.80 |
+| AL | 0.6% | 24.6 | 21.5% | 3.76 |
 
-## 4. Repeat customers are 3.12% of the customer base but generate 5.72% of revenue and spend ~87% more per head
+59.7% of sellers are based in SP.
 
-2,997 of 96,096 real customers (`customer_unique_id`) placed more than
-one order. That small group's average lifetime revenue is R$258.40,
-versus R$138.28 for one-time customers — 1.87x higher. Repeat customers
-therefore contribute a share of revenue (5.72%) disproportionate to
-their share of the customer base (3.12%), even though the absolute
-repeat rate is low in market terms.
+*SQL: `reporting.vw_customer_geography_performance`, `analytics.dim_seller`.*
 
-*Source: `analytics.dim_customer.is_repeat_customer` joined to
-`fact_orders`, aggregated by customer.*
+## 4. Freight weighs more on revenue outside the Southeast
 
-## 5. São Paulo delivers in roughly half the time of the next-largest states, and concentrates both supply and demand — unequally
+Freight is 22.7% of net item revenue for Norte customers and 21.7% for
+Nordeste, versus 15.2% in Sudeste (which holds 67,299 of 98,207 valid orders).
 
-Customers in SP generate 38.27% of total revenue with an average
-delivery time of **8.8 days**; RJ (13.4% of revenue) averages 15.3
-days, and BA (3.75% of revenue) averages 19.3 days — more than double
-SP's delivery time. This lines up with the supply side: 59.74% of all
-sellers are based in SP, versus only 38.27% of revenue coming from SP
-customers — sellers are more concentrated in SP than demand is,
-meaning a majority of orders placed outside SP are shipped from a
-seller based somewhere else in the country, which is consistent with
-the longer delivery times observed outside SP/Sudeste.
+*SQL: `analytics.fact_orders` → `dim_customer` → `dim_geography`, valid orders.*
 
-*Source: `reporting.vw_customer_geography_performance`,
-`analytics.dim_seller`.*
+## 5. A fifth of active sellers combine above-median revenue with below-average reviews
 
-## 6. Freight cost as a share of revenue is 50% higher in the North than in the Southeast
+620 of 3,053 active sellers (20.3%) have revenue above the median seller
+(R$825) and an average review below the platform average (4.09). Together
+they hold R$5.04M, 37.3% of seller revenue. Applying a stricter screen —
+30+ orders, late rate above 10% and average review below 3.8 — leaves
+**41 sellers holding R$462K**.
 
-Freight represents 22.74% of item revenue for customers in the Norte
-region and 21.74% in Nordeste, versus 15.16% in Sudeste — the region
-that also has the shortest delivery times and the highest seller
-concentration. Customers in Brazil's less economically central regions
-pay proportionally more to receive the same kind of goods, and appear
-to wait longer for them.
+*SQL: `reporting.vw_seller_performance` (median via `PERCENTILE_CONT`).*
 
-*Source: `analytics.fact_order_items` joined through `dim_customer` /
-`dim_geography`.*
+## 6. `office_furniture` is a high-revenue category with low reviews
 
-## 7. Credit card is the only payment method Brazilian customers use to finance a purchase over time
+R$273,580.70 of revenue (inside the top 20 categories) with an average
+review of 3.62 over 1,272 orders, the lowest of the top 20 and 0.47 below
+the platform average.
 
-Credit card carries an average of 3.51 installments and represents
-R$12.54M of the R$16.01M in total captured payments (78.3%); boleto,
-voucher and debit card average almost exactly 1.00 installments each
-— they are essentially always paid in full immediately. Any pricing or
-promotion strategy involving payment plans has, in practice, only one
-real channel to work through.
+*SQL: `reporting.vw_category_performance`.*
 
-*Source: `reporting.vw_payment_method_summary`.*
+## 7. Few customers buy twice
 
-## 8. Demand grew explosively year over year, but the only valid comparison window is 8 months
+2,997 of 96,096 unique customers (3.12%) placed more than one order of
+any status; counting only valid orders, 2,888 of 94,990 (3.04%). Repeat
+customers average R$258.40 of net revenue each versus R$138.28 for
+one-time buyers and hold 5.72% of net revenue.
 
-Comparing the only overlapping period with reliable data — Jan-Aug 2017
-vs. Jan-Aug 2018 — net revenue grew from R$3,080,850.81 to
-R$7,341,037.41, a **+138.31%** year-over-year increase. This reflects a
-platform still in a high-growth phase during the period captured by
-this dataset, not a mature, stable marketplace — a distinction that
-matters for interpreting any of the other insights here (e.g. the low
-3.12% repeat rate is more explainable in a fast-growing, still
-customer-acquisition-heavy business).
+*SQL: `07_business_queries/08_repeat_purchase_rate.sql`.*
 
-*Source: `analytics.fact_orders` joined to `analytics.dim_date`,
-filtered to month <= 8 for both years — see `docs/kpi_definitions.md`
-for why a full-year comparison isn't possible with this dataset.*
+## 8. Credit card is the only payment method used in installments
 
-## 9. Revenue has a clear, singular seasonal peak, not steady seasonality
+Credit card carries 78.3% of payment value (R$12.54M of R$16.01M, all
+order statuses) with 3.51 installments on average; boleto, voucher and
+debit card average 1.00.
 
-November 2017 revenue grew +52.06% month-over-month (Black Friday),
-immediately followed by a -26.07% pull-back in December. No other month
-in the 2017-01/2018-08 window shows a swing anywhere near this size in
-either direction. Demand in this dataset is better described as
-"steady growth with one seasonal event," not as a business with regular
-recurring seasonal cycles.
+*SQL: `reporting.vw_payment_method_summary`.*
 
-*Source: `reporting.vw_monthly_revenue`.*
+## 9. Strong growth with one seasonal spike
+
+Jan–Aug 2018 net revenue was R$7,341,037.41 vs R$3,080,850.81 in
+Jan–Aug 2017 (**+138.3%**), the only comparable window. November 2017
+grew +52.1% month over month and December fell −26.1%; no other month in
+Jan 2017–Aug 2018 moved that much.
+
+*SQL: `reporting.vw_monthly_revenue`.*

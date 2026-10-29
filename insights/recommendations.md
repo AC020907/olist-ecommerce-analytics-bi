@@ -1,189 +1,134 @@
 # Business Recommendations
 
-Each recommendation follows: **Insight → Business Implication →
-Recommendation → Expected Impact → Metric to Monitor**. Expected impact
-is stated only using benchmarks already observed in this dataset (never
-an invented industry percentage) — where no internal benchmark exists,
-that limitation is stated explicitly instead of a fabricated number.
+Each recommendation follows **Finding → Evidence → Interpretation →
+Hypothesis → Recommended action → KPI to track**. Findings and evidence
+are observed in the data ([`business_insights.md`](business_insights.md)).
+Interpretations and hypotheses are **not proven**: this is a historical,
+observational dataset without experiments, costs, margins or marketing
+spend, so no recommendation below claims a revenue or satisfaction gain.
+Where a decision would need causal evidence, the action is the
+experiment or analysis that would produce it.
 
 ---
 
-### 1. Late deliveries are the strongest driver of dissatisfaction found
+### 1. Treat on-time delivery as a customer-experience KPI, and test whether it moves reviews
 
-- **Insight:** on-time orders average a 4.29 review score; late orders
-  average 2.57 (7,825 orders, 8.11% of deliveries).
-- **Business implication:** delivery reliability is a bigger lever on
-  customer perception than product, price or category — meaning
-  logistics investment likely has a higher satisfaction ROI than
-  catalog or pricing initiatives.
-- **Recommendation:** identify and prioritize the carriers/sellers with
-  the highest concentration of late deliveries (already surfaced per
-  seller in `reporting.vw_seller_performance`) for corrective action —
-  renegotiated SLAs, carrier replacement, or stricter `shipping_limit_date`
-  enforcement.
-- **Expected impact:** the 4.29 score is not a hypothetical target — it
-  is the score this same platform already achieves for 91.9% of
-  deliveries. Closing even part of the gap between the 2.57 late-order
-  average and the 4.29 on-time average, for a subset of the 7,825 late
-  orders, is a realistic, internally-benchmarked goal (no external
-  assumption required).
-- **Metric to monitor:** `Late Delivery %` and `Avg Review Score
-  On-Time` vs. `Late` (both already defined in `powerbi/dax_measures.md`),
-  tracked monthly.
+- **Finding:** late orders are reviewed far worse than on-time orders.
+- **Evidence:** 4.29 vs 2.27 average review (6,533 late of 96,446 measurable
+  deliveries); the average falls from 3.73 at one day late to 1.67–1.73 at 8+ days.
+- **Interpretation:** the dose-response pattern (worse with each extra day)
+  is consistent with lateness itself hurting satisfaction, but late orders
+  also differ in seller, region and product, which could explain part of
+  the gap.
+- **Hypothesis:** reducing late deliveries — or setting promised dates the
+  logistics network can meet — would raise average reviews.
+- **Recommended action:** (1) re-estimate the gap within the same seller and
+  category to remove the obvious confounders; (2) A/B test more conservative
+  promised dates for a share of orders in high-late states and compare
+  review scores and conversion.
+- **KPI to track:** weekly late-delivery rate; average review for on-time vs
+  late orders; share of 1–2 star reviews.
 
-### 2. One in five active sellers sits in a revenue/satisfaction risk quadrant — and they're not small
+### 2. Plan delivery capacity ahead of demand peaks
 
-- **Insight:** 639 of 3,053 active sellers (20.9%) combine above-median
-  revenue with below-average review scores — and together they account
-  for **R$5,287,093.62, or 39.18% of all seller-side revenue**.
-- **Business implication:** this is not a fringe problem. A large share
-  of platform revenue runs through sellers whose performance is
-  actively working against retention — a churn and reputation risk
-  concentrated in a specific, identifiable list of sellers.
-- **Recommendation:** build a seller account-management program
-  targeting this specific 639-seller list first (not sellers in
-  general): structured performance reviews, delivery-time SLAs tied to
-  marketplace visibility/ranking, and support to fix root causes before
-  considering deprioritizing them in search/recommendation placement.
-- **Expected impact:** cannot be quantified in revenue terms without
-  assuming a specific improvement rate this data doesn't provide — but
-  the R$5.29M revenue exposure itself is the business case for
-  prioritizing this list over an undifferentiated seller-quality
-  initiative.
-- **Metric to monitor:** count and revenue share of sellers in the risk
-  quadrant, tracked quarterly as a cohort (does the list shrink?).
+- **Finding:** late deliveries cluster in a few high-volume months.
+- **Evidence:** 2.8–3.0% late in May–Aug 2017, 12.4% in Nov 2017, 14.1% in
+  Feb 2018 and 19.0% in Mar 2018.
+- **Interpretation:** the Nov 2017 spike coincides with Black Friday volume;
+  Feb–Mar 2018 volume (6,600–7,200 orders) was similar to Jan and Apr–May 2018, which had normal late rates, so volume alone
+  does not explain it (carrier disruptions are one possibility the data
+  cannot confirm).
+- **Hypothesis:** carrier and seller capacity do not scale with peak volume.
+- **Recommended action:** monitor the late rate weekly with an alert
+  threshold (e.g. twice the trailing 8-week median), and investigate the
+  Feb–Mar 2018 episode by carrier and seller before committing to a
+  capacity plan.
+- **KPI to track:** weekly late rate; orders per active seller; late rate by
+  seller state during peak weeks.
 
-### 3. `office_furniture` underperforms on satisfaction relative to its own revenue tier
+### 3. Review a short list of high-volume sellers with poor delivery and ratings
 
-- **Insight:** R$273,580.70 in revenue (top-20 category) with a 3.62
-  average review score — the lowest of any top-20 category, 0.47 points
-  below the platform average.
-- **Business implication:** the issue is specific to this category
-  (product quality, packaging/damage in transit, or seller mix within
-  it), not a platform-wide delivery problem — it needs its own
-  investigation, not a generic fix.
-- **Recommendation:** audit the sellers and products within
-  `office_furniture` specifically (join `fact_order_items` +
-  `dim_seller` + `dim_product` filtered to this category) to determine
-  whether the low score concentrates in a few sellers/products or is
-  spread evenly across the category.
-- **Expected impact:** not quantifiable without the audit's findings —
-  stated as the next diagnostic step, not a guessed outcome.
-- **Metric to monitor:** `Avg Review Score` filtered to
-  `category_name_en = "office_furniture"`, tracked monthly.
+- **Finding:** a small set of sizable sellers combines late deliveries with
+  low reviews.
+- **Evidence:** 41 sellers with 30+ orders have a late rate above 10% and an
+  average review below 3.8 (R$462K of revenue). A looser screen (above-median
+  revenue, below-average review) returns 620 sellers and R$5.04M.
+- **Interpretation:** the thresholds are a screening rule, not a verdict:
+  low ratings can come from product quality, category or customer region,
+  not only from the seller's operations.
+- **Hypothesis:** for some of these sellers, fulfilment issues (late
+  hand-over to the carrier) drive the low ratings.
+- **Recommended action:** check each seller's carrier hand-over time against
+  `shipping_limit_date` and their review comments; agree corrective plans
+  only where the seller's own process is the cause.
+- **KPI to track:** number of sellers meeting the screen, quarter over
+  quarter; their late rate and average review.
 
-### 4. Repeat customers are worth pursuing — the unit economics are already visible
+### 4. Diagnose the low satisfaction in `office_furniture`
 
-- **Insight:** repeat customers (3.12% of the base) average R$258.40 in
-  lifetime revenue vs. R$138.28 for one-time buyers — a R$120.12
-  per-customer difference, already observed, not projected.
-- **Business implication:** converting even a modest share of the
-  93,099 one-time customers into repeat buyers has a known, positive
-  per-customer economics — the question is acquisition cost of that
-  conversion, which is outside this dataset's scope.
-- **Recommendation:** target lifecycle marketing (email/notification
-  follow-up, second-purchase incentive) at customers shortly after their
-  first delivered order, using `dim_customer.first_order_date` to define
-  the outreach window.
-- **Expected impact:** R$120.12 in incremental lifetime revenue per
-  customer successfully converted to repeat status — this is the
-  observed differential in the data, not a forecast; whether outreach
-  cost makes this profitable per customer is a marketing-economics
-  question this dataset cannot answer.
-- **Metric to monitor:** `Repeat Customer Rate` (currently 3.12%),
-  tracked monthly as a trend, not a one-time snapshot.
+- **Finding:** a top-20 revenue category has the lowest reviews of the top 20.
+- **Evidence:** R$273,580.70 revenue, 3.62 average review (platform 4.09), 1,272 orders.
+- **Interpretation:** bulky goods could suffer more damage or delays, but the
+  issue could also concentrate in a few sellers or products.
+- **Hypothesis:** a small number of sellers or products drives most of the low scores.
+- **Recommended action:** break the category's reviews down by seller,
+  product and delay bucket (item-grain fact joined to the order-grain review)
+  before taking any category-wide action.
+- **KPI to track:** average review and late rate for the category, monthly.
 
-### 5. Delivery speed and revenue are both concentrated in São Paulo — expansion should target supply, not just demand
+### 5. Investigate seller coverage outside São Paulo
 
-- **Insight:** SP customers generate 38.27% of revenue with 8.8-day
-  average delivery; RJ (13.4% of revenue) averages 15.3 days; BA (3.75%)
-  averages 19.3 days. Supply is even more concentrated than demand:
-  59.74% of all sellers are based in SP.
-- **Business implication:** slower delivery outside SP is plausibly a
-  supply-chain distance problem (SP-based sellers shipping nationally),
-  not a demand or willingness-to-buy problem in other states.
-- **Recommendation:** prioritize seller recruitment/onboarding efforts
-  in high-revenue, currently slow-delivery states (RJ, BA, and similarly
-  underserved Nordeste states) to shorten shipping distance for local
-  demand, rather than only marketing to customers there.
-- **Expected impact:** cannot be quantified without knowing recruitment
-  cost and take-up — the observed SP benchmark (8.8 days) is the
-  internal proof that shorter in-state seller-to-customer distance
-  correlates with faster delivery, which is the basis for the
-  recommendation.
-- **Metric to monitor:** `Avg Delivery Days` by state, and seller count
-  by state, tracked together (does delivery time fall as local seller
-  count rises?).
+- **Finding:** delivery is slower and later outside SP.
+- **Evidence:** SP 8.8 days / 4.5% late; RJ 15.3 / 12.1%; BA 19.3 / 12.1%;
+  AL 24.6 / 21.5%. 59.7% of sellers are in SP.
+- **Interpretation:** distance between SP-based sellers and customers is a
+  plausible explanation; carrier coverage and infrastructure are others.
+  This dataset has no carrier field to separate them.
+- **Hypothesis:** orders served by a seller in the customer's own state or
+  region arrive faster.
+- **Recommended action:** compare delivery time for same-state vs.
+  cross-state seller–customer pairs (both locations are in the model) before
+  investing in regional seller recruitment.
+- **KPI to track:** average delivery days and late rate by customer state;
+  share of orders served by same-region sellers.
 
-### 6. Freight cost inequity by region is a pricing/competitiveness risk outside the Southeast
+### 6. Size freight sensitivity before considering regional freight changes
 
-- **Insight:** freight is 22.74% of item revenue in Norte and 21.74% in
-  Nordeste, vs. 15.16% in Sudeste.
-- **Business implication:** customers in Norte/Nordeste face a
-  meaningfully higher effective price for the same goods, which likely
-  suppresses demand growth in those regions relative to the Southeast.
-- **Recommendation:** evaluate a regional freight subsidy or a
-  negotiated flat-rate shipping tier for Norte/Nordeste orders,
-  funded by the fact that Sudeste (67,296 of ~98,000 orders) already
-  carries the platform's volume economics.
-- **Expected impact:** not quantifiable without knowing price
-  elasticity of demand in those regions — stated as a hypothesis this
-  data supports (the cost disparity is real) but cannot size on its own.
-- **Metric to monitor:** `Freight % of Revenue` by region, alongside
-  order volume growth by region (to see if narrowing the gap correlates
-  with demand growth there).
+- **Finding:** freight is a larger share of the basket outside the Southeast.
+- **Evidence:** 22.7% of item revenue in Norte, 21.7% in Nordeste, 15.2% in Sudeste.
+- **Interpretation:** customers there pay more per real of goods; whether
+  this suppresses demand cannot be measured here (no price variation,
+  no traffic or conversion data).
+- **Hypothesis:** lower freight would increase conversion in Norte/Nordeste.
+- **Recommended action:** if the business has conversion data, test a
+  freight discount for a random subset of Norte/Nordeste sessions and
+  measure conversion and margin; otherwise do not act on this finding alone.
+- **KPI to track:** freight % of revenue and orders by region.
 
-### 7. Credit card installments are the platform's only real financing lever
+### 7. Measure retention by cohort before investing in it
 
-- **Insight:** credit card averages 3.51 installments and 78.3% of
-  total payment value; boleto/voucher/debit average ~1.00 installments.
-- **Business implication:** any strategy relying on "buy now, pay over
-  time" to lift AOV or conversion has, in practice, only one payment
-  method to work through.
-- **Recommendation:** ensure checkout UX prominently surfaces
-  installment options for credit card, and evaluate partnerships that
-  could extend similar financing to boleto users (a large share of
-  volume, R$2.87M, currently paid in full).
-- **Expected impact:** not quantifiable — this dataset shows the current
-  mix, not a causal test of what happens if boleto gained installments.
-- **Metric to monitor:** `Avg Installments` and `AOV` by `payment_type`,
-  tracked to detect any shift if boleto financing were introduced.
+- **Finding:** few customers buy twice.
+- **Evidence:** 3.12% repeat (3.04% counting valid orders only); repeat
+  customers average R$258.40 vs R$138.28 of net revenue.
+- **Interpretation:** the R$120 difference is partly mechanical — repeat
+  customers have more orders by definition — so it is not the value that
+  converting a one-time buyer would add. The observed window is short and
+  the platform grew +138% year over year, which depresses any point-in-time
+  repeat rate.
+- **Hypothesis:** a second-purchase campaign would raise the repeat rate.
+- **Recommended action:** report repeat rate by acquisition-month cohort
+  (90/180-day repeat), and run a holdout-controlled post-delivery campaign
+  before estimating its value.
+- **KPI to track:** 90-day and 180-day cohort repeat rate; incremental
+  repeat rate of treated vs. holdout customers.
 
-### 8. Retention KPIs should be read in the context of a high-growth phase
+### 8. Keep payment analysis descriptive
 
-- **Insight:** the only valid year-over-year comparison (Jan-Aug 2017
-  vs. Jan-Aug 2018) shows +138.31% revenue growth — this is a platform
-  in aggressive acquisition mode, not a mature, stable marketplace.
-- **Business implication:** the 3.12% repeat rate should not be judged
-  against a mature-marketplace benchmark; a business growing this fast
-  is, by construction, adding new customers faster than existing ones
-  accumulate a second purchase within the observed window.
-- **Recommendation:** track repeat rate as a **cohort metric** (repeat
-  rate of customers acquired in month X, measured 6/12 months later)
-  rather than a single point-in-time snapshot, so retention trends
-  aren't confounded by the acquisition growth rate.
-- **Expected impact:** not a revenue projection — a methodology
-  correction so future retention analysis isn't misread.
-- **Metric to monitor:** cohort-based repeat rate by acquisition month.
-
-### 9. Seasonal demand spikes strain delivery performance — plan capacity ahead of them
-
-- **Insight:** the late-delivery rate jumped to 14.31% in November 2017
-  (the Black Friday month), more than double the 5.18-5.29% rate seen
-  in September-October, before partially recovering to 8.38% in
-  December and 6.56% in January 2018.
-- **Business implication:** the November revenue spike (+52.06% MoM,
-  the analysis) came at a real, measurable operational cost — delivery
-  performance degraded exactly when volume peaked, which plausibly also
-  degraded satisfaction for that cohort (consistent with finding #1).
-- **Recommendation:** treat November capacity (carrier allocation,
-  seller shipping-time buffers, `shipping_limit_date` enforcement) as a
-  planned seasonal event, not business as usual — pre-negotiate carrier
-  capacity ahead of the season based on the prior year's volume pattern.
-- **Expected impact:** if capacity planning brought November's late rate
-  down toward the 5-6% baseline seen in adjacent months, that is an
-  internally-observed, already-achieved performance level for this
-  platform — not a hypothetical external target.
-- **Metric to monitor:** `Late Delivery %` specifically for November
-  (or any month with a similar MoM revenue spike), tracked year over
-  year as more seasons of data become available.
+- **Finding:** only credit card is used in installments.
+- **Evidence:** 3.51 average installments and 78.3% of payment value;
+  other methods average 1.00.
+- **Interpretation:** the data shows the current mix only; it cannot show
+  what would happen if other methods offered installments.
+- **Recommended action:** no change based on this data; if installment
+  options are tested, compare AOV and conversion against a control group.
+- **KPI to track:** AOV and average installments by payment type.

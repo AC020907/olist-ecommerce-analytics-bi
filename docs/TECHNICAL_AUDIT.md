@@ -1,5 +1,10 @@
 # Technical Audit
 
+> **Current status (branch `fix/olist-final-audit`):** see [section 6](#6-resolution-status-fixolist-final-audit).
+> Sections 1–5 are the original audit and keep the figures measured at the time
+> (e.g. 8.11% late under the old timestamp rule); the current figures are in
+> [KPI_RECONCILIATION.md](KPI_RECONCILIATION.md).
+
 **Scope:** full repository as of commit `323a995` (branch `main`), audited on 2026-10-29.
 **Method:** every SQL layer was executed end-to-end on a fresh PostgreSQL 18 cluster
 from the committed CSVs; the Power BI model (`powerbi/olist_business_intelligence.pbix`)
@@ -90,3 +95,31 @@ connection detail (`localhost`, user `postgres`) is generic documentation.
 - **GitHub Actions:** the workflow has not run (nothing was pushed). Its commands are the same
   ones executed locally.
 - **The notebook** was not re-executed.
+
+
+## 6. Resolution status (`fix/olist-final-audit`)
+
+| ID | Finding | Resolution | Evidence | Status |
+|---|---|---|---|---|
+| A-01 | On-time review measure counted blank `is_late` as on-time | DAX now uses strict `==`; saved in the `.pbix` | DAX 4.2947 = SQL on the same data; `powerbi/measure_fixes.dax` | Fixed |
+| A-02 | Freight / item / seller measures included canceled orders | Valid-order filters added to 6 measures (+ `Avg Items per Order`, A-16) | DAX = SQL to the cent (`KPI_RECONCILIATION.md` §2) | Fixed |
+| A-03 | Pipeline not re-runnable | `sql/00_reset` + transactional Python build | CI builds twice; `test_rebuild_is_idempotent` | Fixed |
+| A-04 | No tests / quality gate | 44 checks, 57 tests, CI | `reports/data_quality_report.md`, CI runs | Fixed |
+| A-05 | CV mixed customer populations | Wording corrected everywhere | `docs/CAREER_MATERIALS.md` | Fixed |
+| A-06 | Repeat rate population undocumented | Documented (3.12% all statuses / 3.04% valid only) | `KPI_RECONCILIATION.md` §1 | Documented |
+| A-07 | Late rule flagged same-day deliveries as late | `is_late` compares calendar dates (all promised dates are at 00:00) | checks `late_flag_uses_calendar_dates`, `promised_date_is_calendar_date`; test `test_delivery_on_promised_day_is_on_time` | **Fixed — late rate 8.11% → 6.77%, late review 2.57 → 2.27** |
+| A-08 | Late-rate denominator included 6 canceled orders with dates | Denominator = `is_late IS NOT NULL` in SQL, DAX and demo | test `test_canceled_order_with_delivery_dates_is_outside_late_rate` | Fixed |
+| A-09 | Payment view includes canceled orders | Kept (payment mix of all captured payments); population stated | `KPI_RECONCILIATION.md` §1 | Documented |
+| A-10 | 8 valid orders without items | Monitored WARN check | quality report | Monitored |
+| A-11 | `dim_geography` described as conformed for sellers | README/KPI docs state customer-only | README | Fixed |
+| A-12 | Hard to reproduce | requirements, `.env.example`, Docker Compose (verified), one-command build | Section 5 | Fixed |
+| A-13 | Power BI screenshot with spell-check marks and stale card | Screenshots rendered from a PDF export of the saved, refreshed report; hidden `region is not (Blank)` page filter removed (card R$ 13.41M → 13.45M); Sales/Customer subtitles state their periods | `images/*.png`, `powerbi/olist_business_intelligence.pdf` | Fixed |
+| A-14 | Latest-address geography | Documented trade-off | `CAREER_MATERIALS.md` | Documented |
+| A-15 | Repo weight (122 MB CSVs) | Kept for offline reproducibility; license allows redistribution with attribution | `data/README.md` | Not changed |
+| A-16 | `Avg Items per Order` numerator summed all statuses (1.147 vs 1.141) | Valid-order filter in DAX | DAX = SQL 1.14 | Fixed |
+| A-17 | Insight "639 sellers / 39.18%" not reproducible | Same query returns 620 / 37.34%; corrected in SQL comments and docs | `10_high_revenue_low_satisfaction.sql` | Fixed |
+| A-18 | Recommendations stated causal effects ("strongest driver", "higher ROI") | Rewritten as finding → evidence → interpretation → hypothesis → action → KPI | `insights/recommendations.md` | Fixed |
+| A-19 | Demo geography (state of record) differed from SQL/Power BI (ZIP-based) | Demo uses the same ZIP-based geography with `Unknown` | reconciliation tests | Fixed |
+
+The exploratory notebook (`notebooks/`) now uses the same calendar-date rule and was re-executed;
+its independent pandas results match the SQL figures (6.77% late, 4.29 vs 2.27).

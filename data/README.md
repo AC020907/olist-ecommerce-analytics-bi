@@ -50,3 +50,23 @@ See the root [README](../README.md) for the full:
 raw → staging → analytics → reporting → Power BI
 
 reproduction workflow.
+
+## License and attribution
+
+The data is the **Brazilian E-Commerce Public Dataset by Olist**, published by Olist on
+Kaggle under **[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)**
+(license field verified through the Kaggle dataset API on 2026-10-29).
+
+What that means for this repository:
+
+| Item | Status |
+|---|---|
+| `data/raw/*.csv` | Unmodified copies of the original files, redistributed with attribution under CC BY-NC-SA 4.0. |
+| `demo/data/*.parquet`, `reports/`, figures and screenshots | Adaptations (aggregates) of the dataset, also licensed CC BY-NC-SA 4.0. Changes: cleaned, modeled and aggregated by this project's pipeline. |
+| Code (`olist_bi/`, `sql/`, `demo/*.py`, `tests/`) | MIT (see `LICENSE`); the MIT license does **not** apply to the data. |
+| Use | Non-commercial: education and a public portfolio. The data and its derivatives are not sold, licensed or used to deliver paid client work. Client projects use the client's own data. |
+
+The CSVs stay in the repository so the pipeline is reproducible offline without a Kaggle
+account; together they are ~122 MB, no single file exceeds GitHub's 100 MB limit, and
+removing them from history would require rewriting Git history, which this project avoids.
+This note is not legal advice.

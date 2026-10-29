@@ -1,8 +1,8 @@
 -- Business question: ¿Qué productos/categorías/vendedores combinan
 -- alto revenue con bajo review score? (operational risk)
--- Real result: 639 of 3,053 active sellers (20.9%) are above the
+-- Real result: 620 of 3,053 active sellers (20.3%) are above the
 -- median seller revenue (R$825) AND below the platform's average
--- review score (4.09) -- together representing 39.18% of seller-side
+-- review score (4.09) -- together representing 37.34% of seller-side
 -- revenue. See recommendations.md #2.
 
 WITH stats AS (

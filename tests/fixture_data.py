@@ -3,10 +3,12 @@
 Orders (all 2017):
   oA  delivered on time, 2 items (R$100 + R$50) and 2 payments (credit + voucher) -> fan-out trap
   oB  delivered late, same person as oA (repeat customer, moved RJ), 2 reviews (1 and 3)
-  oC  canceled, R$200 item                                                  -> excluded from net
+  oC  canceled, R$200 item, yet has delivery dates                         -> excluded from net and late rate
   oD  delivered, but customer date < carrier date (impossible)              -> no delivery KPIs
   oE  unavailable, no items                                                 -> excluded from net
-Expected net revenue = 100 + 50 + 80 + 40 = R$270.00 over 3 valid orders (oA, oB, oD).
+  oF  delivered at 18:00 ON the promised date                              -> on time (calendar-date rule)
+Expected net revenue = 100 + 50 + 80 + 40 + 60 = R$330.00 over 4 valid orders (oA, oB, oD, oF).
+Late rate = 1 late (oB) / 3 delivered with valid dates (oA, oB, oF) = 33.33%.
 """
 from __future__ import annotations
 
@@ -18,21 +20,21 @@ def _id(tag: str) -> str:
     return tag.ljust(32, "0")
 
 
-C1, C2, C3, C4, C5 = (_id(f"c{i}") for i in range(1, 6))
-U1, U2, U3, U4 = (_id(f"u{i}") for i in range(1, 5))
-OA, OB, OC, OD, OE = (_id(f"o{x}") for x in "abcde")
+C1, C2, C3, C4, C5, C6 = (_id(f"c{i}") for i in range(1, 7))
+U1, U2, U3, U4, U5 = (_id(f"u{i}") for i in range(1, 6))
+OA, OB, OC, OD, OE, OF = (_id(f"o{x}") for x in "abcdef")
 P1, P2, P3 = (_id(f"p{i}") for i in range(1, 4))
 S1, S2 = _id("s1"), _id("s2")
 
 EXPECTED = {
-    "orders_total": 5,
-    "valid_orders": 3,
-    "customers": 4,
-    "gross_revenue": 470.00,
-    "net_revenue": 270.00,
-    "aov": 90.00,
-    "net_freight": 27.00,
-    "late_rate_pct": 50.00,
+    "orders_total": 6,
+    "valid_orders": 4,
+    "customers": 5,
+    "gross_revenue": 530.00,
+    "net_revenue": 330.00,
+    "aov": 82.50,
+    "net_freight": 33.00,
+    "late_rate_pct": 33.33,
     "repeat_customers": 1,
 }
 
@@ -45,6 +47,7 @@ TABLES: dict[str, tuple[list[str], list[list[str]]]] = {
             [C3, U2, "20000", "rio de janeiro", "RJ"],
             [C4, U3, "99999", "porto alegre", "RS"],  # ZIP absent from geolocation
             [C5, U4, "01001", "sao paulo", "SP"],
+            [C6, U5, "01001", "sao paulo", "SP"],
         ],
     ),
     "olist_products_dataset.csv": (
@@ -79,9 +82,10 @@ TABLES: dict[str, tuple[list[str], list[list[str]]]] = {
         [
             [OA, C1, "delivered", "2017-03-10 10:00:00", "2017-03-10 11:00:00", "2017-03-12 09:00:00", "2017-03-15 10:00:00", "2017-03-20 00:00:00"],
             [OB, C2, "delivered", "2017-04-01 10:00:00", "2017-04-01 11:00:00", "2017-04-03 09:00:00", "2017-04-25 10:00:00", "2017-04-15 00:00:00"],
-            [OC, C3, "canceled", "2017-04-05 10:00:00", "", "", "", "2017-04-25 00:00:00"],
+            [OC, C3, "canceled", "2017-04-05 10:00:00", "2017-04-05 11:00:00", "2017-04-07 09:00:00", "2017-04-10 10:00:00", "2017-04-25 00:00:00"],
             [OD, C4, "delivered", "2017-05-01 10:00:00", "2017-05-01 11:00:00", "2017-05-10 09:00:00", "2017-05-08 10:00:00", "2017-05-20 00:00:00"],
             [OE, C5, "unavailable", "2017-05-02 10:00:00", "2017-05-02 11:00:00", "", "", "2017-05-25 00:00:00"],
+            [OF, C6, "delivered", "2017-06-01 10:00:00", "2017-06-01 11:00:00", "2017-06-03 09:00:00", "2017-06-12 18:00:00", "2017-06-12 00:00:00"],
         ],
     ),
     "olist_order_items_dataset.csv": (
@@ -92,6 +96,7 @@ TABLES: dict[str, tuple[list[str], list[list[str]]]] = {
             [OB, "1", P1, S1, "2017-04-03 00:00:00", "80.00", "8.00"],
             [OC, "1", P3, S1, "2017-04-07 00:00:00", "200.00", "20.00"],
             [OD, "1", P2, S2, "2017-05-03 00:00:00", "40.00", "4.00"],
+            [OF, "1", P1, S1, "2017-06-03 00:00:00", "60.00", "6.00"],
         ],
     ),
     "olist_order_payments_dataset.csv": (
@@ -102,6 +107,7 @@ TABLES: dict[str, tuple[list[str], list[list[str]]]] = {
             [OB, "1", "boleto", "1", "88.00"],
             [OC, "1", "credit_card", "1", "220.00"],
             [OD, "1", "credit_card", "2", "44.00"],
+            [OF, "1", "debit_card", "1", "66.00"],
         ],
     ),
     "olist_order_reviews_dataset.csv": (
@@ -112,6 +118,7 @@ TABLES: dict[str, tuple[list[str], list[list[str]]]] = {
             [_id("r2"), OB, "1", "", "atrasou", "2017-04-26 00:00:00", "2017-04-27 00:00:00"],
             [_id("r3"), OB, "3", "", "", "2017-04-28 00:00:00", "2017-04-29 00:00:00"],
             [_id("r4"), OD, "4", "", "", "2017-05-09 00:00:00", "2017-05-10 00:00:00"],
+            [_id("r5"), OF, "5", "", "", "2017-06-13 00:00:00", "2017-06-14 00:00:00"],
         ],
     ),
 }

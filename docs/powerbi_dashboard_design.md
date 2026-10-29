@@ -22,7 +22,7 @@ negocio en menos de 30 segundos.
 
 **KPI cards (top row):** Total Revenue (R$13.49M) · Total Orders
 (98,207) · Total Customers (96,096) · AOV (R$137.41) · Avg Review Score
-(4.09) · Late Delivery Rate (8.11%).
+(4.09) · Late Delivery Rate (6.77%).
 
 **Visualizaciones:**
 - Line chart: Net Revenue by month, default-filtered to the analysis
@@ -159,7 +159,7 @@ satisfaction" lens as Page 5, applied to categories instead of sellers.
 operacional: mucho revenue, mala experiencia de entrega/satisfacción.
 
 **KPI cards:** Active Sellers (3,053 with at least one sale) · Sellers
-in the risk quadrant (**639**, verified: above-median revenue AND
+in the risk quadrant (**620**, verified: above-median revenue AND
 below-average review score) · Avg Late Delivery Rate across sellers.
 
 **Visualizaciones:**
@@ -167,10 +167,10 @@ below-average review score) · Avg Late Delivery Rate across sellers.
   size = Orders, with reference lines at the median revenue (R$825)
   and the overall avg review score (4.09) — splitting the chart into
   4 quadrants; the top-right-by-revenue/bottom-by-score quadrant is
-  the 639-seller risk group, called out with a distinct color.
+  the 620-seller risk group, called out with a distinct color.
 - Table (top 15 by revenue): seller_id, state, revenue, avg delivery
   days, late delivery %, avg review score — conditional formatting
-  (red) on rows with late_delivery_rate_pct above the 8.11% overall
+  (red) on rows with late_delivery_rate_pct above the 6.77% overall
   average.
 - Bar chart: Seller count / revenue by state (seller-side geography —
   distinct from Page 6's customer-side geography).
@@ -181,7 +181,7 @@ exclude single-sale sellers from the scatter plot as noise).
 **Drill-through:** right-click a seller's state → **Delivery &
 Geographic Analysis** filtered to that state.
 
-**Insight:** 639 of 3,053 active sellers (20.9%) sit in the risk
+**Insight:** 620 of 3,053 active sellers (20.3%) sit in the risk
 quadrant — a concrete, sized target list for account management, not
 an abstract warning.
 
@@ -192,10 +192,10 @@ an abstract warning.
 **Objetivo:** responder directamente si los retrasos de entrega afectan
 la satisfacción, y dónde se concentra el problema geográficamente.
 
-**KPI cards:** Avg Delivery Days (12.6) · Late Delivery Rate (8.11%) ·
-Avg Review Score, On-Time (**4.29**) vs. Late (**2.57**) — a 1.72-point
-gap on a 5-point scale, the strongest single relationship found in this
-dataset.
+**KPI cards:** Avg Delivery Days (12.6) · Late Delivery Rate (6.77%) ·
+Avg Review Score, On-Time (**4.29**) vs. Late (**2.27**) — a 2.02-point
+gap on a 5-point scale, the largest difference found in this dataset
+(an association, not a measured causal effect).
 
 **Visualizaciones:**
 - Filled Map (Power BI's built-in map, geographic role = State,
@@ -216,9 +216,9 @@ dataset.
 **Interacciones:** the map cross-filters the bar chart and scatter
 plot.
 
-**Insight:** delivery delay is the single clearest driver of
-dissatisfaction found in the data (4.29 vs. 2.57 avg score) — stronger
-and more actionable than any category-level or seller-level pattern,
+**Insight:** late delivery is the clearest correlate of dissatisfaction
+found in the data (4.29 vs. 2.27 avg score) — a larger gap than any
+category-level or seller-level pattern,
 and directly ties to the state-level concentration also shown on this
 page.
 

@@ -34,7 +34,7 @@ SELECT
         WHERE order_status NOT IN ('canceled', 'unavailable')), 2)               AS avg_items_per_order,
     ROUND(AVG(delivery_days), 1)                                               AS avg_delivery_days,
     ROUND(100.0 * COUNT(*) FILTER (WHERE is_late)
-        / NULLIF(COUNT(*) FILTER (WHERE has_valid_delivery_dates), 0), 2)       AS late_delivery_rate_pct,
+        / NULLIF(COUNT(*) FILTER (WHERE is_late IS NOT NULL), 0), 2)       AS late_delivery_rate_pct,
     ROUND(AVG(avg_review_score), 2)                                              AS avg_review_score
 FROM analytics.fact_orders;
 

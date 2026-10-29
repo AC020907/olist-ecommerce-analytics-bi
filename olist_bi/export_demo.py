@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
@@ -22,11 +23,16 @@ log = logging.getLogger(__name__)
 
 DEMO_DATA_DIR = REPO_ROOT / "demo" / "data"
 
+# Same customer geography as reporting.vw_customer_geography_performance and the Power BI
+# model (dim_customer.zip_code_prefix -> dim_geography); ZIPs missing from the public
+# geolocation file stay in an explicit 'Unknown' bucket so totals still reconcile.
 _CUSTOMER_GEO = """
 customer_geo AS (
-    SELECT dc.customer_unique_id, dc.state AS customer_state, COALESCE(r.region, 'Unknown') AS customer_region
+    SELECT dc.customer_unique_id,
+           COALESCE(dg.state, 'Unknown')  AS customer_state,
+           COALESCE(dg.region, 'Unknown') AS customer_region
     FROM analytics.dim_customer dc
-    LEFT JOIN (SELECT DISTINCT state, region FROM analytics.dim_geography) r ON r.state = dc.state
+    LEFT JOIN analytics.dim_geography dg ON dg.zip_code_prefix = dc.zip_code_prefix
 )"""
 
 QUERIES: dict[str, str] = {
@@ -47,7 +53,7 @@ SELECT
     SUM(fo.delivery_days)                                                AS delivery_days_sum,
     COUNT(fo.delivery_days)                                              AS delivery_days_n,
     COUNT(*) FILTER (WHERE fo.is_late)                                   AS late_orders,
-    COUNT(*) FILTER (WHERE fo.has_valid_delivery_dates)                  AS valid_delivery_orders,
+    COUNT(*) FILTER (WHERE fo.is_late IS NOT NULL)                  AS valid_delivery_orders,
     SUM(fo.avg_review_score)                                             AS review_sum,
     COUNT(fo.avg_review_score)                                           AS review_n
 FROM analytics.fact_orders fo
@@ -104,7 +110,7 @@ order_outcomes AS (
     SELECT s.seller_id, s.year_month, s.customer_state,
            SUM(fo.delivery_days) AS delivery_days_sum, COUNT(fo.delivery_days) AS delivery_days_n,
            COUNT(*) FILTER (WHERE fo.is_late) AS late_orders,
-           COUNT(*) FILTER (WHERE fo.has_valid_delivery_dates) AS valid_delivery_orders,
+           COUNT(*) FILTER (WHERE fo.is_late IS NOT NULL) AS valid_delivery_orders,
            SUM(fo.avg_review_score) AS review_sum, COUNT(fo.avg_review_score) AS review_n
     FROM (SELECT DISTINCT seller_id, year_month, customer_state, order_id FROM items) s
     JOIN analytics.fact_orders fo ON fo.order_id = s.order_id
@@ -114,13 +120,13 @@ SELECT t.*, o.delivery_days_sum, o.delivery_days_n, o.late_orders, o.valid_deliv
 FROM item_totals t
 JOIN order_outcomes o USING (seller_id, year_month, customer_state)
 """,
-    # Delivered orders with valid dates, bucketed by how late they arrived vs. the promised date.
-    # Uses the project's is_late definition (delivered timestamp > estimated delivery timestamp).
+    # Delivered orders with valid dates, bucketed by calendar days past the promised date
+    # (same rule as is_late: a delivery on the promised day is on time).
     "delivery_buckets": f"""
 WITH {_CUSTOMER_GEO},
 delivered AS (
     SELECT fo.order_id, fo.is_late, fo.avg_review_score, d.year_month, g.customer_state, g.customer_region,
-           EXTRACT(EPOCH FROM (o.order_delivered_customer_date - o.order_estimated_delivery_date)) / 86400.0 AS days_vs_promise
+           o.order_delivered_customer_date::date - o.order_estimated_delivery_date::date AS days_late
     FROM analytics.fact_orders fo
     JOIN raw.orders o ON o.order_id = fo.order_id
     JOIN analytics.dim_date d ON d.date_day = fo.order_date_key
@@ -130,12 +136,12 @@ delivered AS (
 SELECT
     year_month, customer_state, customer_region,
     CASE
-        WHEN NOT is_late             THEN '0. On time or early'
-        WHEN days_vs_promise <= 1    THEN '1. Up to 1 day late'
-        WHEN days_vs_promise <= 3    THEN '2. 1-3 days late'
-        WHEN days_vs_promise <= 7    THEN '3. 4-7 days late'
-        WHEN days_vs_promise <= 14   THEN '4. 8-14 days late'
-        ELSE                              '5. 15+ days late'
+        WHEN NOT is_late      THEN '0. On time or early'
+        WHEN days_late = 1    THEN '1. 1 day late'
+        WHEN days_late <= 3   THEN '2. 2-3 days late'
+        WHEN days_late <= 7   THEN '3. 4-7 days late'
+        WHEN days_late <= 14  THEN '4. 8-14 days late'
+        ELSE                       '5. 15+ days late'
     END AS delay_bucket,
     COUNT(*) AS orders,
     SUM(avg_review_score) AS review_sum,
@@ -147,6 +153,7 @@ GROUP BY 1, 2, 3, 4
 }
 
 REFERENCE_SQL = "SELECT * FROM reporting.vw_executive_summary"
+PERIOD_SQL = "SELECT MIN(order_purchase_timestamp)::date, MAX(order_purchase_timestamp)::date FROM raw.orders"
 
 
 def _to_frame(cur: psycopg.Cursor) -> pd.DataFrame:
@@ -172,5 +179,14 @@ def export(database_url: str, out_dir: Path = DEMO_DATA_DIR) -> dict[str, int]:
             log.info("  %-18s %7d rows", name, len(frame))
         cur.execute(REFERENCE_SQL)
         reference = {k: float(v) for k, v in zip([c.name for c in cur.description], cur.fetchone())}
+        cur.execute(PERIOD_SQL)
+        first_order, last_order = cur.fetchone()
     (out_dir / "kpi_reference.json").write_text(json.dumps(reference, indent=2), encoding="utf-8")
+    metadata = {
+        "first_order_date": first_order.isoformat(),
+        "last_order_date": last_order.isoformat(),
+        "exported_on": date.today().isoformat(),
+        "source": "Olist Brazilian E-Commerce Public Dataset (Kaggle, CC BY-NC-SA 4.0)",
+    }
+    (out_dir / "export_metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     return sizes

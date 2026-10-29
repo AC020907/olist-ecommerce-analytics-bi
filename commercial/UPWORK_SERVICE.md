@@ -10,7 +10,7 @@ Most sales reports break in the same places: revenue that changes depending on w
 
 I build sales dashboards on top of a clean data model, not on top of raw exports. I load your data (Excel/CSV exports, a database, or your e-commerce platform's exports), clean it, model it so the numbers add up, check it with automated tests, and deliver a Power BI dashboard with the KPIs you actually use to run the business.
 
-You can see the full approach in my public case study — a 1.5-million-row e-commerce dataset turned into a PostgreSQL star schema, 42 automated data-quality checks, a six-page Power BI dashboard and a browser-based demo:
+You can see the full approach in my public case study — a 1.5-million-row e-commerce dataset turned into a PostgreSQL star schema, 44 automated data-quality checks, a six-page Power BI dashboard and a browser-based demo:
 
 - Code and documentation: https://github.com/AC020907/olist-ecommerce-analytics-bi
 - Case study: docs/CASE_STUDY.md in that repository
