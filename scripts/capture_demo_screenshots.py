@@ -11,14 +11,14 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-URL = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8501"
+URL = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8501"  # public app: https://<app>.streamlit.app/~/+/
 OUT_DIR = Path(__file__).resolve().parent.parent / "images" / "demo"
 TABS = {
     "Executive overview": "01_executive_overview.png",
     "Sales performance": "02_sales_performance.png",
     "Delivery & satisfaction": "03_delivery_satisfaction.png",
-    "Insights & weekly KPIs": "04_insights_weekly_kpis.png",
-    "How the numbers are built": "05_methodology.png",
+    "Business insights": "04_business_insights.png",
+    "Methodology & data quality": "05_methodology_data_quality.png",
 }
 
 
@@ -28,7 +28,7 @@ def main() -> None:
         browser = p.chromium.launch(channel="msedge")
         page = browser.new_page(viewport={"width": 1440, "height": 900}, device_scale_factor=1.5)
         page.goto(URL)
-        page.get_by_text("From raw order data").wait_for(timeout=60_000)
+        page.get_by_text("Olist marketplace").first.wait_for(timeout=180_000)
         page.wait_for_timeout(3000)
         for tab, filename in TABS.items():
             page.get_by_role("tab", name=tab).click()

@@ -12,6 +12,7 @@ I build sales dashboards on top of a clean data model, not on top of raw exports
 
 You can see the full approach in my public case study — a 1.5-million-row e-commerce dataset turned into a PostgreSQL star schema, 44 automated data-quality checks, a six-page Power BI dashboard and a browser-based demo:
 
+- Live app: https://olist-sales-analytics.streamlit.app
 - Code and documentation: https://github.com/AC020907/olist-ecommerce-analytics-bi
 - Case study: docs/CASE_STUDY.md in that repository
 

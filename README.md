@@ -1,18 +1,32 @@
 # Olist E-Commerce Analytics & BI
 
-**From 1.5 million raw marketplace rows to reconciled KPIs, a Power BI executive dashboard and an interactive web demo — with every number tested.**
+### ▶ Live app: **[olist-sales-analytics.streamlit.app](https://olist-sales-analytics.streamlit.app)** — opens in any browser, nothing to install
+
+**From 1.5 million raw marketplace rows to reconciled KPIs, a public BI web app and a Power BI executive dashboard — with every number tested.**
 
 *Independent portfolio project on the public [Olist Brazilian e-commerce dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) (99,441 orders, 2016–2018). Not commissioned by, affiliated with, or used by Olist; no figure below is a business result I delivered to a client.*
 
-**Demo:** `streamlit run demo/app.py` (no database needed) · public deployment steps in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
-
-![Web demo — executive overview](images/demo/01_executive_overview.png)
+[![Live app — executive overview](images/demo/01_executive_overview.png)](https://olist-sales-analytics.streamlit.app)
 
 | Net revenue analysed | Valid orders | Avg order value | Late deliveries | Review: on-time vs late | Data checks | Tests |
 |---:|---:|---:|---:|---:|---:|---:|
-| R$ 13.49M | 98,207 | R$ 137.41 | 6.77% | 4.29 vs 2.27 | 44 (0 failing) | 57 passing |
+| R$ 13.49M | 98,207 | R$ 137.41 | 6.77% | 4.29 vs 2.27 | 44 (0 failing) | 64 passing + 4 E2E on the live URL |
 
-KPIs are identical in PostgreSQL, Power BI and the web demo — see the [reconciliation matrix](docs/KPI_RECONCILIATION.md).
+KPIs are identical in PostgreSQL, Power BI and the web app — see the [reconciliation matrix](docs/KPI_RECONCILIATION.md).
+
+## The app
+
+A five-section BI application on the historical Olist data (orders Sep 2016 – Oct 2018; snapshot date shown in the app):
+
+| Section | What it answers |
+|---|---|
+| **Executive overview** | Net revenue, orders, AOV, customer satisfaction, late-delivery rate; deltas vs the previous period; monthly trends; key highlights |
+| **Sales performance** | Month-over-month growth, revenue by state, category ranking and share, category movers (last 3 months vs the 3 before), seller concentration |
+| **Delivery & satisfaction** | Delivery time, late rate, distribution of delays, review score by days late, late rate by state, sellers to review, seller profile |
+| **Business insights** | Findings written as evidence → hypothesis → recommendation → KPI to track, recalculated for the current filters; weekly KPI scorecard |
+| **Methodology & data quality** | Source, period, architecture, grain, KPI definitions, live results of the 44 data-quality checks, SQL reconciliation, limitations |
+
+Filters (period, customer region, state, product category) work together and every KPI, chart and table follows them; empty selections show a message instead of an error. The category filter is single-select by design: combining categories would count multi-category orders twice. Hosting, monitoring and the update procedure: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ---
 
@@ -36,9 +50,10 @@ flowchart LR
 - **PostgreSQL warehouse** in four layers with PK/FK/CHECK constraints, rebuilt by a **Python pipeline** in one transaction (~30 s, idempotent).
 - **Star schema** with facts at order, item and payment grain, so revenue is never multiplied by joins.
 - **Data quality gate:** 44 checks — keys, nulls, dates, money, and revenue reconciliation across grains and views ([report](reports/data_quality_report.md)).
-- **57 automated tests**, including a hand-computed fixture warehouse and demo-vs-SQL reconciliation under date, region, state, category and seller filters; GitHub Actions builds the full warehouse twice and runs them.
+- **64 automated tests**, including a hand-computed fixture warehouse and app-vs-SQL reconciliation under date, region, state, category and seller filters; GitHub Actions builds the full warehouse twice and runs them.
+- **Public deployment** on Streamlit Community Cloud from `main`, with Playwright end-to-end tests run against the live URL after every deploy and weekly.
 - **Power BI** six-page dashboard on the star schema with a documented [DAX library](powerbi/dax_measures.md).
-- **Streamlit demo** for viewers without Power BI: filters, insights with caveats, a weekly KPI scorecard and an in-app reconciliation table.
+- **Streamlit web app**, publicly deployed: filters, insights with caveats, a weekly KPI scorecard, data-quality results and an in-app reconciliation table.
 
 ### Star schema
 
@@ -85,7 +100,7 @@ Each recommendation is written as *finding → evidence → interpretation → h
 
 ## Dashboards
 
-**Web demo** (Streamlit)
+**Web app** (Streamlit) — [live](https://olist-sales-analytics.streamlit.app)
 
 | Sales performance | Delivery & satisfaction |
 |---|---|
@@ -101,7 +116,7 @@ More pages: [sales](images/Sales_performance.png) · [customers](images/Customer
 
 ## Tech stack
 
-PostgreSQL · SQL (CTEs, window functions, constraints) · Python (psycopg, pandas, pytest) · Power BI / DAX · Streamlit / Plotly · Docker Compose · GitHub Actions
+PostgreSQL · SQL (CTEs, window functions, constraints) · Python (psycopg, pandas, pytest, Playwright) · Power BI / DAX · Streamlit / Plotly · Streamlit Community Cloud · Docker Compose · GitHub Actions
 
 ## Repository layout
 
@@ -150,7 +165,8 @@ OLIST_RECONCILE_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/olist
 ```
 
 - Integration tests need a **separate** database whose name contains `test` (they drop and rebuild schemas).
-- Current results: 44 checks (40 pass, 4 documented source-data warnings, 0 failures); 57 tests passing locally (PostgreSQL 18) and in Docker (PostgreSQL 16).
+- Current results: 44 checks (40 pass, 4 documented source-data warnings, 0 failures); 64 tests passing locally (PostgreSQL 18), in Docker and in GitHub Actions (PostgreSQL 16).
+- End-to-end tests against the live app: `APP_URL=https://olist-sales-analytics.streamlit.app pytest tests/e2e` (Playwright; also run by `public-app-smoke.yml`).
 - Independent review and resolution of every issue found: [docs/TECHNICAL_AUDIT.md](docs/TECHNICAL_AUDIT.md).
 
 ## Limitations
@@ -159,7 +175,7 @@ OLIST_RECONCILE_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/olist
 - Delay-vs-review results are observational; recommendations call for controlled comparisons before investment.
 - Sep–Dec 2016 and Sep–Oct 2018 are partial months; trend views default to Jan 2017 – Aug 2018.
 - Customer geography uses each person's latest order address.
-- The demo is a static snapshot of exported aggregates, not live data.
+- The web app shows a static snapshot of exported aggregates, not live data; the free host puts it to sleep after inactivity (one click wakes it).
 
 ## Data license
 

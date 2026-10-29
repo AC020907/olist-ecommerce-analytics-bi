@@ -6,7 +6,7 @@
 
 **Skills to tag:** Microsoft Power BI · SQL · PostgreSQL · Python · Data Modeling · ETL · Dashboard · Data Visualization · DAX · Business Intelligence
 
-**Images (in this order):** `images/demo/01_executive_overview.png`, `images/demo/03_delivery_satisfaction.png`, `images/Executive_overview.png`, `images/demo/05_methodology.png`.
+**Images (in this order):** `images/demo/01_executive_overview.png`, `images/demo/03_delivery_satisfaction.png`, `images/Executive_overview.png`, `images/demo/05_methodology_data_quality.png`.
 
 ---
 
@@ -32,4 +32,5 @@ End-to-end sales analytics on a public e-commerce dataset (99k orders, 1.5M rows
 
 **What it means for your business.** The same pipeline works with your exports: one trusted revenue number, a dashboard that refreshes instead of being rebuilt, and early warnings on delivery and customer satisfaction.
 
+Live app: https://olist-sales-analytics.streamlit.app
 Code and documentation: https://github.com/AC020907/olist-ecommerce-analytics-bi
