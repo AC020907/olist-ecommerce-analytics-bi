@@ -59,19 +59,20 @@ committed parquet files. Tolerance: exact to the cent for money, 1e-9 relative f
 | | Total Freight | 2,241,126.29 | 2,241,126.29 | 2,241,126.29 | ✓ |
 | | Avg Review | 4.0868 | 4.0868 | 4.0868 | ✓ |
 | | Avg Delivery Days | 12.559 | 12.559 | 12.559 | ✓ |
-| | Late Delivery % | 6.77% | **8.11%** | 6.77% | Power BI pending data refresh (§3) |
+| | Late Delivery % | 6.7737% | 6.7737% | 6.7737% | ✓ |
+| | Review on-time / late | 4.291 / 2.271 | 4.291 / 2.271 | 4.29 / 2.27 (delivery buckets) | ✓ |
 | | Item Revenue / Items | 13,494,400.74 / 112,101 | 13,494,400.74 / 112,101 | = | ✓ |
 | | Customers / Repeat rate | 96,096 / 3.12% | 96,096 / 3.12% | n/a | ✓ |
 | Date: Jan–Jun 2018 | Net Revenue | 5,614,133.04 | 5,614,133.04 | 5,614,133.04 | ✓ |
 | | Orders / AOV | 40,877 / 137.34 | 40,877 / 137.34 | 40,877 / 137.34 | ✓ |
 | | Freight | 942,247.37 | 942,247.37 | 942,247.37 | ✓ |
 | | Avg Review / Delivery days | 4.0376 / 13.318 | 4.0376 / 13.318 | 4.0376 / 13.318 | ✓ |
-| | Late Delivery % | 8.63% | **9.95%** | 8.63% | Power BI pending data refresh |
+| | Late Delivery % | 8.6342% | 8.6342% | 8.6342% | ✓ |
 | Region: Nordeste | Net Revenue | 1,532,758.69 | 1,532,758.69 | 1,532,758.69 | ✓ |
 | | Orders / AOV | 9,277 / 165.22 | 9,277 / 165.22 | 9,277 / 165.22 | ✓ |
 | | Freight | 333,235.19 | 333,235.19 | 333,235.19 | ✓ |
 | | Avg Review / Delivery days | 3.8969 / 19.983 | 3.8969 / 19.983 | 3.8969 / 19.983 | ✓ |
-| | Late Delivery % | 12.68% | **14.27%** | 12.68% | Power BI pending data refresh |
+| | Late Delivery % | 12.676% | 12.676% | 12.676% | ✓ |
 | Region: Unknown | Net Revenue / Orders | 36,199.13 / 272 | (Blank) bucket | 36,199.13 / 272 | ✓ SQL = Streamlit |
 | Status (gross) | Gross Revenue | 13,591,643.70 | 13,591,643.70 | 13,591,643.70 | ✓ |
 | Category: health_beauty | Revenue / Items | 1,255,695.13 / 9,634 | 1,255,695.13 / 9,634 | 1,255,695.13 / 9,634 | ✓ |
@@ -84,10 +85,18 @@ DAX queries; Power BI Desktop cannot run in CI.
 
 ## 3. Power BI status
 
-The nine corrected measures (`Avg Review Score On-Time`, `Avg Review Score Late`,
-`Late Delivery %`, `Total Freight`, `Avg Items per Order`, `Item Revenue`, `Items Sold`,
-`Avg Item Price`, `Seller Revenue`) are applied to the model and verified above. The
-late-delivery values still reflect data imported under the previous timestamp rule: the
-report imports from `localhost:5432/olist_analytics`, which must be rebuilt
-(`scripts/rebuild_powerbi_source.ps1`) and refreshed in Power BI Desktop. After refresh the
-expected values are 6.77% late, 4.29 on-time and 2.27 late review.
+Verified 2026-10-29 by closing and reopening the saved `.pbix` and querying it:
+
+- the nine corrected measures (`Avg Review Score On-Time`, `Avg Review Score Late`,
+  `Late Delivery %`, `Total Freight`, `Avg Items per Order`, `Item Revenue`, `Items Sold`,
+  `Avg Item Price`, `Seller Revenue`) are stored in the file;
+- the imported data was refreshed from a warehouse built with the calendar-date rule
+  (6.7737% late, 4.291 on-time vs 2.271 late review, R$ 13,494,400.74, R$ 2,241,126.29 freight);
+- the data source is the standard `PostgreSQL.Database("localhost", "olist_analytics")`.
+
+Report fixes in the same pass: the Executive Overview page had a hidden page filter
+`region is not (Blank)` that dropped 272 orders (R$ 36,199.13), so its card showed
+R$ 13.41M instead of R$ 13.45M for Jan 2017–Aug 2018; the filter was removed and the
+unmapped customers appear as "(Blank)". The Sales and Customer pages' subtitles now say
+which visuals use all orders and which use the Jan 2017–Aug 2018 window.
+`powerbi/olist_business_intelligence.pdf` is an export of the saved report.

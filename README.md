@@ -91,7 +91,7 @@ Each recommendation is written as *finding → evidence → interpretation → h
 |---|---|
 | ![Sales performance](images/demo/02_sales_performance.png) | ![Delivery and satisfaction](images/demo/03_delivery_satisfaction.png) |
 
-**Power BI** — [`powerbi/olist_business_intelligence.pbix`](powerbi/olist_business_intelligence.pbix), Import mode on the `analytics` schema: Executive Overview, Sales, Customers, Products & Categories, Sellers, Delivery & Satisfaction.
+**Power BI** — [`powerbi/olist_business_intelligence.pbix`](powerbi/olist_business_intelligence.pbix) (PDF export for viewers without Power BI: [`olist_business_intelligence.pdf`](powerbi/olist_business_intelligence.pdf)), Import mode on the `analytics` schema: Executive Overview, Sales, Customers, Products & Categories, Sellers, Delivery & Satisfaction.
 
 | Executive overview | Delivery & satisfaction |
 |---|---|

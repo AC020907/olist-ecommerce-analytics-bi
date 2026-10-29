@@ -2,7 +2,8 @@
 // measure_fixes.dax -- change log for docs/TECHNICAL_AUDIT.md findings A-01, A-02, A-08
 //
 // Applied to olist_business_intelligence.pbix on 2026-10-29 through the Power BI
-// modeling MCP server (Tabular Object Model) and saved from Power BI Desktop.
+// modeling MCP server (Tabular Object Model), data refreshed, saved from Power BI
+// Desktop and verified after closing and reopening the file.
 // These are the exact expressions now stored in the model's _Measures table.
 //
 // Before -> after, full dataset (data imported under the calendar-date late rule):

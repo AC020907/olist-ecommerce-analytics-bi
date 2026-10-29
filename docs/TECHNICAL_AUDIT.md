@@ -113,7 +113,7 @@ connection detail (`localhost`, user `postgres`) is generic documentation.
 | A-10 | 8 valid orders without items | Monitored WARN check | quality report | Monitored |
 | A-11 | `dim_geography` described as conformed for sellers | README/KPI docs state customer-only | README | Fixed |
 | A-12 | Hard to reproduce | requirements, `.env.example`, Docker Compose (verified), one-command build | Section 5 | Fixed |
-| A-13 | Power BI screenshot with spell-check marks and stale card | Re-exported from the saved report | `images/` | See README |
+| A-13 | Power BI screenshot with spell-check marks and stale card | Screenshots rendered from a PDF export of the saved, refreshed report; hidden `region is not (Blank)` page filter removed (card R$ 13.41M → 13.45M); Sales/Customer subtitles state their periods | `images/*.png`, `powerbi/olist_business_intelligence.pdf` | Fixed |
 | A-14 | Latest-address geography | Documented trade-off | `CAREER_MATERIALS.md` | Documented |
 | A-15 | Repo weight (122 MB CSVs) | Kept for offline reproducibility; license allows redistribution with attribution | `data/README.md` | Not changed |
 | A-16 | `Avg Items per Order` numerator summed all statuses (1.147 vs 1.141) | Valid-order filter in DAX | DAX = SQL 1.14 | Fixed |

@@ -6,7 +6,7 @@
 
 **Skills to tag:** Microsoft Power BI · SQL · PostgreSQL · Python · Data Modeling · ETL · Dashboard · Data Visualization · DAX · Business Intelligence
 
-**Images (in this order):** `images/demo/01_executive_overview.png`, `images/demo/03_delivery_satisfaction.png`, `images/Executive_overview.png` (re-capture after applying `powerbi/measure_fixes.dax`), `images/demo/05_methodology.png`.
+**Images (in this order):** `images/demo/01_executive_overview.png`, `images/demo/03_delivery_satisfaction.png`, `images/Executive_overview.png`, `images/demo/05_methodology.png`.
 
 ---
 
