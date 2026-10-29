@@ -18,6 +18,7 @@ import pandas as pd
 import psycopg
 
 from .config import REPO_ROOT
+from .quality import run_checks
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +35,15 @@ customer_geo AS (
     FROM analytics.dim_customer dc
     LEFT JOIN analytics.dim_geography dg ON dg.zip_code_prefix = dc.zip_code_prefix
 )"""
+
+_DELAY_BUCKET = """CASE
+        WHEN NOT is_late      THEN '0. On time or early'
+        WHEN days_late = 1    THEN '1. 1 day late'
+        WHEN days_late <= 3   THEN '2. 2-3 days late'
+        WHEN days_late <= 7   THEN '3. 4-7 days late'
+        WHEN days_late <= 14  THEN '4. 8-14 days late'
+        ELSE                       '5. 15+ days late'
+    END"""
 
 QUERIES: dict[str, str] = {
     # Order grain. Keeps canceled/unavailable rows (is_valid_order = false) because the
@@ -78,16 +88,50 @@ item_totals AS (
            COUNT(*) AS items, COUNT(DISTINCT order_id) AS orders, SUM(price) AS revenue
     FROM items GROUP BY 1, 2, 3, 4
 ),
-reviews AS (
+order_outcomes AS (
+    -- Order-level outcomes for the distinct orders that contain the category, so a
+    -- single-category filter can drive orders / late rate / reviews without fan-out.
     SELECT i.year_month, i.customer_state, i.customer_region, i.category,
-           SUM(fo.avg_review_score) AS review_sum, COUNT(fo.avg_review_score) AS review_n
+           SUM(fo.avg_review_score) AS review_sum, COUNT(fo.avg_review_score) AS review_n,
+           SUM(fo.delivery_days) AS delivery_days_sum, COUNT(fo.delivery_days) AS delivery_days_n,
+           COUNT(*) FILTER (WHERE fo.is_late) AS late_orders,
+           COUNT(*) FILTER (WHERE fo.is_late IS NOT NULL) AS valid_delivery_orders
     FROM (SELECT DISTINCT year_month, customer_state, customer_region, category, order_id FROM items) i
     JOIN analytics.fact_orders fo ON fo.order_id = i.order_id
     GROUP BY 1, 2, 3, 4
 )
-SELECT t.*, r.review_sum, r.review_n
+SELECT t.*, o.review_sum, o.review_n, o.delivery_days_sum, o.delivery_days_n, o.late_orders, o.valid_delivery_orders
 FROM item_totals t
-JOIN reviews r USING (year_month, customer_state, customer_region, category)
+JOIN order_outcomes o USING (year_month, customer_state, customer_region, category)
+""",
+    # Delay buckets for the distinct valid orders containing each category (single-category filter).
+    "category_delivery_buckets": f"""
+WITH {_CUSTOMER_GEO},
+category_orders AS (
+    SELECT DISTINCT dp.category_name_en AS category, foi.order_id
+    FROM analytics.fact_order_items foi
+    JOIN analytics.dim_product dp ON dp.product_id = foi.product_id
+    WHERE foi.order_status NOT IN ('canceled', 'unavailable')
+),
+delivered AS (
+    SELECT co.category, fo.is_late, fo.avg_review_score, d.year_month, g.customer_state, g.customer_region,
+           o.order_delivered_customer_date::date - o.order_estimated_delivery_date::date AS days_late
+    FROM category_orders co
+    JOIN analytics.fact_orders fo ON fo.order_id = co.order_id
+    JOIN raw.orders o ON o.order_id = fo.order_id
+    JOIN analytics.dim_date d ON d.date_day = fo.order_date_key
+    JOIN customer_geo g ON g.customer_unique_id = fo.customer_unique_id
+    WHERE fo.is_late IS NOT NULL
+)
+SELECT
+    year_month, customer_state, customer_region, category,
+    {_DELAY_BUCKET} AS delay_bucket,
+    COUNT(*) AS orders,
+    SUM(avg_review_score) AS review_sum,
+    COUNT(avg_review_score) AS review_n,
+    COUNT(*) FILTER (WHERE avg_review_score <= 2) AS low_review_orders
+FROM delivered
+GROUP BY 1, 2, 3, 4, 5
 """,
     # Seller x month x customer state, valid orders only (same population as vw_seller_performance).
     "sellers": f"""
@@ -135,14 +179,7 @@ delivered AS (
 )
 SELECT
     year_month, customer_state, customer_region,
-    CASE
-        WHEN NOT is_late      THEN '0. On time or early'
-        WHEN days_late = 1    THEN '1. 1 day late'
-        WHEN days_late <= 3   THEN '2. 2-3 days late'
-        WHEN days_late <= 7   THEN '3. 4-7 days late'
-        WHEN days_late <= 14  THEN '4. 8-14 days late'
-        ELSE                       '5. 15+ days late'
-    END AS delay_bucket,
+    {_DELAY_BUCKET} AS delay_bucket,
     COUNT(*) AS orders,
     SUM(avg_review_score) AS review_sum,
     COUNT(avg_review_score) AS review_n,
@@ -189,4 +226,10 @@ def export(database_url: str, out_dir: Path = DEMO_DATA_DIR) -> dict[str, int]:
         "source": "Olist Brazilian E-Commerce Public Dataset (Kaggle, CC BY-NC-SA 4.0)",
     }
     (out_dir / "export_metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    quality = [
+        {"check": r.check.name, "category": r.check.category, "description": r.check.description,
+         "severity": r.check.severity, "value": r.value, "tolerance": r.check.tolerance, "status": r.status}
+        for r in run_checks(database_url)
+    ]
+    (out_dir / "quality_summary.json").write_text(json.dumps(quality, indent=2), encoding="utf-8")
     return sizes

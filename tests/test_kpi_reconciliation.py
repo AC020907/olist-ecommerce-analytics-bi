@@ -156,3 +156,50 @@ def test_full_reference_matches_live_view(full_db):
         cur = conn.execute("SELECT * FROM reporting.vw_executive_summary")
         live = {c.name: float(v) for c, v in zip(cur.description, cur.fetchone())}
     assert reference == pytest.approx(live)
+
+
+CATEGORY_SQL = """
+WITH cat_items AS (
+    SELECT foi.order_id, foi.price
+    FROM analytics.fact_order_items foi
+    JOIN analytics.dim_product dp ON dp.product_id = foi.product_id
+    JOIN analytics.dim_date d ON d.date_day = foi.order_date_key
+    JOIN analytics.dim_customer dc ON dc.customer_unique_id = foi.customer_unique_id
+    LEFT JOIN analytics.dim_geography dg ON dg.zip_code_prefix = dc.zip_code_prefix
+    WHERE dp.category_name_en = %(category)s
+      AND foi.order_status NOT IN ('canceled', 'unavailable')
+      AND d.year_month BETWEEN %(month_from)s AND %(month_to)s
+      AND (%(states)s::text[] IS NULL OR COALESCE(dg.state, 'Unknown') = ANY(%(states)s::text[]))
+),
+cat_orders AS (SELECT DISTINCT order_id FROM cat_items)
+SELECT
+    (SELECT SUM(price) FROM cat_items)                                         AS revenue,
+    COUNT(*)                                                                   AS orders,
+    AVG(fo.avg_review_score)                                                   AS review,
+    100.0 * COUNT(*) FILTER (WHERE fo.is_late) / NULLIF(COUNT(fo.is_late), 0)  AS late_pct,
+    AVG(fo.delivery_days)                                                      AS delivery_days
+FROM cat_orders co
+JOIN analytics.fact_orders fo ON fo.order_id = co.order_id
+"""
+
+
+@pytest.mark.parametrize("category, month_from, month_to, states", [
+    ("health_beauty", "2017-01", "2018-08", None),
+    ("bed_bath_table", "2018-01", "2018-06", ["SP"]),
+    ("office_furniture", "2016-09", "2018-10", None),
+])
+def test_full_category_filter_matches_sql(category, month_from, month_to, states, full_db, frames):
+    rows = m.apply_filters(frames["categories"], month_from, month_to, None, states)
+    demo = m.category_kpis(rows[rows["category"] == category.replace("_", " ")])
+    with psycopg.connect(full_db) as conn:
+        cur = conn.execute(CATEGORY_SQL, dict(category=category, month_from=month_from, month_to=month_to, states=states))
+        sql = {c.name: float(v) for c, v in zip(cur.description, cur.fetchone())}
+    assert demo["revenue"] == pytest.approx(sql["revenue"], abs=0.01)
+    assert demo["orders"] == sql["orders"]
+    for key in ("review", "late_pct", "delivery_days"):
+        assert demo[key] == pytest.approx(sql[key], rel=1e-9), key
+
+
+def test_category_kpis_refuse_multiple_categories(frames):
+    with pytest.raises(ValueError):
+        m.category_kpis(frames["categories"])

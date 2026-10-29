@@ -1,0 +1,398 @@
+[
+  {
+    "check": "unique_pk_dim_date",
+    "category": "primary keys",
+    "description": "analytics.dim_date has exactly one row per (date_day)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "unique_pk_dim_geography",
+    "category": "primary keys",
+    "description": "analytics.dim_geography has exactly one row per (zip_code_prefix)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "unique_pk_dim_customer",
+    "category": "primary keys",
+    "description": "analytics.dim_customer has exactly one row per (customer_unique_id)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "unique_pk_dim_seller",
+    "category": "primary keys",
+    "description": "analytics.dim_seller has exactly one row per (seller_id)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "unique_pk_dim_product",
+    "category": "primary keys",
+    "description": "analytics.dim_product has exactly one row per (product_id)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "unique_pk_fact_orders",
+    "category": "primary keys",
+    "description": "analytics.fact_orders has exactly one row per (order_id)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "unique_pk_fact_order_items",
+    "category": "primary keys",
+    "description": "analytics.fact_order_items has exactly one row per (order_id, order_item_id)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "unique_pk_fact_payments",
+    "category": "primary keys",
+    "description": "analytics.fact_payments has exactly one row per (order_id, payment_sequential)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "fk_fact_orders_customer_unique_id",
+    "category": "foreign keys",
+    "description": "every analytics.fact_orders.customer_unique_id exists in analytics.dim_customer",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "fk_fact_orders_order_date_key",
+    "category": "foreign keys",
+    "description": "every analytics.fact_orders.order_date_key exists in analytics.dim_date",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "fk_fact_order_items_product_id",
+    "category": "foreign keys",
+    "description": "every analytics.fact_order_items.product_id exists in analytics.dim_product",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "fk_fact_order_items_seller_id",
+    "category": "foreign keys",
+    "description": "every analytics.fact_order_items.seller_id exists in analytics.dim_seller",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "fk_fact_order_items_order_id",
+    "category": "foreign keys",
+    "description": "every analytics.fact_order_items.order_id exists in analytics.fact_orders",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "fk_fact_payments_order_id",
+    "category": "foreign keys",
+    "description": "every analytics.fact_payments.order_id exists in analytics.fact_orders",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "customer_zip_in_geography",
+    "category": "foreign keys",
+    "description": "customers whose ZIP prefix is absent from the public geolocation file (source-data gap; kept in an explicit 'Unknown' bucket, never dropped)",
+    "severity": "warn",
+    "value": 268.0,
+    "tolerance": 0,
+    "status": "WARN"
+  },
+  {
+    "check": "not_null_fact_orders",
+    "category": "required fields",
+    "description": "analytics.fact_orders: order_id, customer_unique_id, order_date_key, order_status are never NULL",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "not_null_fact_order_items",
+    "category": "required fields",
+    "description": "analytics.fact_order_items: order_id, product_id, seller_id, price, order_date_key are never NULL",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "not_null_fact_payments",
+    "category": "required fields",
+    "description": "analytics.fact_payments: order_id, payment_type, payment_value are never NULL",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "not_null_dim_product",
+    "category": "required fields",
+    "description": "analytics.dim_product: category_name_en are never NULL",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "not_null_dim_customer",
+    "category": "required fields",
+    "description": "analytics.dim_customer: zip_code_prefix, state are never NULL",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "row_count_orders",
+    "category": "completeness",
+    "description": "fact_orders keeps every raw order (no rows lost or duplicated by joins)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "row_count_order_items",
+    "category": "completeness",
+    "description": "fact_order_items keeps every raw order item",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "row_count_payments",
+    "category": "completeness",
+    "description": "fact_payments keeps every raw payment",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "customers_complete",
+    "category": "completeness",
+    "description": "dim_customer has one row per distinct raw customer_unique_id",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "no_negative_money",
+    "category": "monetary values",
+    "description": "no negative price, freight or payment value",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "zero_price_items",
+    "category": "monetary values",
+    "description": "order items with a zero price",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "zero_value_payments",
+    "category": "monetary values",
+    "description": "payment rows with value 0 (vouchers / not_defined in the source data)",
+    "severity": "warn",
+    "value": 9.0,
+    "tolerance": 0,
+    "status": "WARN"
+  },
+  {
+    "check": "valid_orders_without_items",
+    "category": "monetary values",
+    "description": "valid (non-canceled) orders with no item rows -- counted as orders, R$0 revenue",
+    "severity": "warn",
+    "value": 8.0,
+    "tolerance": 0,
+    "status": "WARN"
+  },
+  {
+    "check": "no_negative_delivery_days",
+    "category": "dates",
+    "description": "delivery_days is never negative (impossible date orderings are NULLed in staging)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "delivered_before_purchase",
+    "category": "dates",
+    "description": "no customer delivery date earlier than the purchase timestamp",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "delivered_before_carrier",
+    "category": "dates",
+    "description": "orders delivered to the customer before carrier handoff (source error; excluded from delivery KPIs)",
+    "severity": "warn",
+    "value": 23.0,
+    "tolerance": 0,
+    "status": "WARN"
+  },
+  {
+    "check": "order_dates_in_dim_date",
+    "category": "dates",
+    "description": "every order date falls inside dim_date",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "late_flag_only_for_delivered",
+    "category": "dates",
+    "description": "is_late is only populated for delivered orders with valid dates",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "late_flag_uses_calendar_dates",
+    "category": "dates",
+    "description": "is_late == (delivered calendar date > promised calendar date) for every measurable delivery",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "promised_date_is_calendar_date",
+    "category": "dates",
+    "description": "estimated delivery dates carry no time of day (justifies the calendar-date late rule)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0,
+    "status": "PASS"
+  },
+  {
+    "check": "no_fanout_gross_revenue",
+    "category": "reconciliation",
+    "description": "gross revenue: fact_orders (order grain) == raw.order_items (no fan-out)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0.005,
+    "status": "PASS"
+  },
+  {
+    "check": "no_fanout_freight",
+    "category": "reconciliation",
+    "description": "gross freight: fact_orders == raw.order_items",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0.005,
+    "status": "PASS"
+  },
+  {
+    "check": "no_fanout_payments",
+    "category": "reconciliation",
+    "description": "payments: fact_orders.payments_total == raw.order_payments",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0.005,
+    "status": "PASS"
+  },
+  {
+    "check": "net_revenue_order_vs_item_grain",
+    "category": "reconciliation",
+    "description": "net revenue: order grain (fact_orders) == item grain (fact_order_items)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0.005,
+    "status": "PASS"
+  },
+  {
+    "check": "category_view_reconciles",
+    "category": "reconciliation",
+    "description": "net revenue == SUM(reporting.vw_category_performance.revenue)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0.5,
+    "status": "PASS"
+  },
+  {
+    "check": "seller_view_reconciles",
+    "category": "reconciliation",
+    "description": "net revenue == SUM(reporting.vw_seller_performance.revenue)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0.5,
+    "status": "PASS"
+  },
+  {
+    "check": "geography_view_reconciles",
+    "category": "reconciliation",
+    "description": "net revenue == SUM(reporting.vw_customer_geography_performance.revenue)",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0.5,
+    "status": "PASS"
+  },
+  {
+    "check": "executive_view_reconciles",
+    "category": "reconciliation",
+    "description": "net revenue == reporting.vw_executive_summary.net_revenue",
+    "severity": "error",
+    "value": 0.0,
+    "tolerance": 0.005,
+    "status": "PASS"
+  },
+  {
+    "check": "payments_vs_items_plus_freight",
+    "category": "reconciliation",
+    "description": "abs(payments - (items + freight)) on valid orders, as % of payments (vouchers/installment interest make small gaps expected)",
+    "severity": "warn",
+    "value": 0.023847813241699458,
+    "tolerance": 0.1,
+    "status": "PASS"
+  }
+]
