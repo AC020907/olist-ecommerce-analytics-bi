@@ -1,0 +1,176 @@
+"""Export small, additive pre-aggregates from the warehouse for the Streamlit demo.
+
+The demo never recomputes business rules: every table below is a GROUP BY over
+the analytics star schema using the same filters as the reporting views
+(valid orders = status not canceled/unavailable). Everything exported is a sum or
+a count, so the app can re-aggregate after any date/state filter and still
+reproduce the SQL KPIs exactly (averages are rebuilt as sum / count).
+"""
+from __future__ import annotations
+
+import json
+import logging
+from decimal import Decimal
+from pathlib import Path
+
+import pandas as pd
+import psycopg
+
+from .config import REPO_ROOT
+
+log = logging.getLogger(__name__)
+
+DEMO_DATA_DIR = REPO_ROOT / "demo" / "data"
+
+_CUSTOMER_GEO = """
+customer_geo AS (
+    SELECT dc.customer_unique_id, dc.state AS customer_state, COALESCE(r.region, 'Unknown') AS customer_region
+    FROM analytics.dim_customer dc
+    LEFT JOIN (SELECT DISTINCT state, region FROM analytics.dim_geography) r ON r.state = dc.state
+)"""
+
+QUERIES: dict[str, str] = {
+    # Order grain. Keeps canceled/unavailable rows (is_valid_order = false) because the
+    # project's delivery and review KPIs are computed over all orders, while revenue and
+    # order counts use valid orders only -- see reporting.vw_executive_summary.
+    "orders": f"""
+WITH {_CUSTOMER_GEO}
+SELECT
+    d.year_month,
+    g.customer_state,
+    g.customer_region,
+    fo.order_status NOT IN ('canceled', 'unavailable')                 AS is_valid_order,
+    COUNT(*)                                                             AS orders,
+    SUM(fo.items_revenue)                                                AS revenue,
+    SUM(fo.freight_total)                                                AS freight,
+    SUM(fo.n_items)                                                      AS items,
+    SUM(fo.delivery_days)                                                AS delivery_days_sum,
+    COUNT(fo.delivery_days)                                              AS delivery_days_n,
+    COUNT(*) FILTER (WHERE fo.is_late)                                   AS late_orders,
+    COUNT(*) FILTER (WHERE fo.has_valid_delivery_dates)                  AS valid_delivery_orders,
+    SUM(fo.avg_review_score)                                             AS review_sum,
+    COUNT(fo.avg_review_score)                                           AS review_n
+FROM analytics.fact_orders fo
+JOIN analytics.dim_date d ON d.date_day = fo.order_date_key
+JOIN customer_geo g ON g.customer_unique_id = fo.customer_unique_id
+GROUP BY 1, 2, 3, 4
+""",
+    # Item grain, valid orders only (same population as vw_category_performance).
+    # Review score is averaged over distinct (category, order) pairs, never per item.
+    "categories": f"""
+WITH {_CUSTOMER_GEO},
+items AS (
+    SELECT foi.order_id, foi.price, dp.category_name_en AS category, d.year_month, g.customer_state, g.customer_region
+    FROM analytics.fact_order_items foi
+    JOIN analytics.dim_product dp ON dp.product_id = foi.product_id
+    JOIN analytics.dim_date d ON d.date_day = foi.order_date_key
+    JOIN customer_geo g ON g.customer_unique_id = foi.customer_unique_id
+    WHERE foi.order_status NOT IN ('canceled', 'unavailable')
+),
+item_totals AS (
+    SELECT year_month, customer_state, customer_region, category,
+           COUNT(*) AS items, COUNT(DISTINCT order_id) AS orders, SUM(price) AS revenue
+    FROM items GROUP BY 1, 2, 3, 4
+),
+reviews AS (
+    SELECT i.year_month, i.customer_state, i.customer_region, i.category,
+           SUM(fo.avg_review_score) AS review_sum, COUNT(fo.avg_review_score) AS review_n
+    FROM (SELECT DISTINCT year_month, customer_state, customer_region, category, order_id FROM items) i
+    JOIN analytics.fact_orders fo ON fo.order_id = i.order_id
+    GROUP BY 1, 2, 3, 4
+)
+SELECT t.*, r.review_sum, r.review_n
+FROM item_totals t
+JOIN reviews r USING (year_month, customer_state, customer_region, category)
+""",
+    # Seller x month x customer state, valid orders only (same population as vw_seller_performance).
+    "sellers": f"""
+WITH {_CUSTOMER_GEO},
+items AS (
+    SELECT foi.seller_id, ds.state AS seller_state, foi.order_id, foi.price,
+           d.year_month, g.customer_state, g.customer_region
+    FROM analytics.fact_order_items foi
+    JOIN analytics.dim_seller ds ON ds.seller_id = foi.seller_id
+    JOIN analytics.dim_date d ON d.date_day = foi.order_date_key
+    JOIN customer_geo g ON g.customer_unique_id = foi.customer_unique_id
+    WHERE foi.order_status NOT IN ('canceled', 'unavailable')
+),
+item_totals AS (
+    SELECT seller_id, seller_state, year_month, customer_state, customer_region,
+           COUNT(*) AS items, COUNT(DISTINCT order_id) AS orders, SUM(price) AS revenue
+    FROM items GROUP BY 1, 2, 3, 4, 5
+),
+order_outcomes AS (
+    SELECT s.seller_id, s.year_month, s.customer_state,
+           SUM(fo.delivery_days) AS delivery_days_sum, COUNT(fo.delivery_days) AS delivery_days_n,
+           COUNT(*) FILTER (WHERE fo.is_late) AS late_orders,
+           COUNT(*) FILTER (WHERE fo.has_valid_delivery_dates) AS valid_delivery_orders,
+           SUM(fo.avg_review_score) AS review_sum, COUNT(fo.avg_review_score) AS review_n
+    FROM (SELECT DISTINCT seller_id, year_month, customer_state, order_id FROM items) s
+    JOIN analytics.fact_orders fo ON fo.order_id = s.order_id
+    GROUP BY 1, 2, 3
+)
+SELECT t.*, o.delivery_days_sum, o.delivery_days_n, o.late_orders, o.valid_delivery_orders, o.review_sum, o.review_n
+FROM item_totals t
+JOIN order_outcomes o USING (seller_id, year_month, customer_state)
+""",
+    # Delivered orders with valid dates, bucketed by how late they arrived vs. the promised date.
+    # Uses the project's is_late definition (delivered timestamp > estimated delivery timestamp).
+    "delivery_buckets": f"""
+WITH {_CUSTOMER_GEO},
+delivered AS (
+    SELECT fo.order_id, fo.is_late, fo.avg_review_score, d.year_month, g.customer_state, g.customer_region,
+           EXTRACT(EPOCH FROM (o.order_delivered_customer_date - o.order_estimated_delivery_date)) / 86400.0 AS days_vs_promise
+    FROM analytics.fact_orders fo
+    JOIN raw.orders o ON o.order_id = fo.order_id
+    JOIN analytics.dim_date d ON d.date_day = fo.order_date_key
+    JOIN customer_geo g ON g.customer_unique_id = fo.customer_unique_id
+    WHERE fo.is_late IS NOT NULL
+)
+SELECT
+    year_month, customer_state, customer_region,
+    CASE
+        WHEN NOT is_late             THEN '0. On time or early'
+        WHEN days_vs_promise <= 1    THEN '1. Up to 1 day late'
+        WHEN days_vs_promise <= 3    THEN '2. 1-3 days late'
+        WHEN days_vs_promise <= 7    THEN '3. 4-7 days late'
+        WHEN days_vs_promise <= 14   THEN '4. 8-14 days late'
+        ELSE                              '5. 15+ days late'
+    END AS delay_bucket,
+    COUNT(*) AS orders,
+    SUM(avg_review_score) AS review_sum,
+    COUNT(avg_review_score) AS review_n,
+    COUNT(*) FILTER (WHERE avg_review_score <= 2) AS low_review_orders
+FROM delivered
+GROUP BY 1, 2, 3, 4
+""",
+}
+
+REFERENCE_SQL = "SELECT * FROM reporting.vw_executive_summary"
+
+
+def _to_frame(cur: psycopg.Cursor) -> pd.DataFrame:
+    columns = [c.name for c in cur.description]
+    frame = pd.DataFrame(cur.fetchall(), columns=columns)
+    for column in frame.columns:
+        if frame[column].map(lambda v: isinstance(v, Decimal)).any():
+            frame[column] = frame[column].astype(float)  # NUMERIC -> float for parquet/plotly
+    return frame
+
+
+def export(database_url: str, out_dir: Path = DEMO_DATA_DIR) -> dict[str, int]:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    sizes: dict[str, int] = {}
+    with psycopg.connect(database_url) as conn, conn.cursor() as cur:
+        for name, sql in QUERIES.items():
+            cur.execute(sql)
+            frame = _to_frame(cur)
+            # Stable row order keeps re-exports byte-comparable in git diffs.
+            frame = frame.sort_values(list(frame.columns[:5])).reset_index(drop=True)
+            frame.to_parquet(out_dir / f"{name}.parquet", index=False)
+            sizes[name] = len(frame)
+            log.info("  %-18s %7d rows", name, len(frame))
+        cur.execute(REFERENCE_SQL)
+        reference = {k: float(v) for k, v in zip([c.name for c in cur.description], cur.fetchone())}
+    (out_dir / "kpi_reference.json").write_text(json.dumps(reference, indent=2), encoding="utf-8")
+    return sizes

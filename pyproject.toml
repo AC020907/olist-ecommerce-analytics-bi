@@ -1,0 +1,4 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = ["integration: builds the warehouse in a disposable PostgreSQL database (needs TEST_DATABASE_URL)"]

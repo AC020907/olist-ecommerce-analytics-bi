@@ -11,3 +11,11 @@ venv/
 
 # Power BI local cache
 *.pbix.bak
+# Local configuration (copy from .env.example)
+.env
+
+# pytest
+.pytest_cache/
+
+# Local editor/agent config
+.claude/

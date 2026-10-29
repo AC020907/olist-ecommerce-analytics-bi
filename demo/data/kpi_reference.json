@@ -1,0 +1,13 @@
+{
+  "total_orders": 98207.0,
+  "total_customers": 96096.0,
+  "net_revenue": 13494400.74,
+  "gross_revenue": 13591643.7,
+  "avg_order_value": 137.41,
+  "total_freight": 2241126.29,
+  "freight_pct_of_revenue": 16.61,
+  "avg_items_per_order": 1.14,
+  "avg_delivery_days": 12.6,
+  "late_delivery_rate_pct": 8.11,
+  "avg_review_score": 4.09
+}

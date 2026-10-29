@@ -1,0 +1,24 @@
+# Local PostgreSQL for the Olist warehouse.
+#   docker compose up -d db
+#   python -m olist_bi all --report reports/data_quality_report.md
+# Credentials below are local-only development defaults; override them in .env.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: olist-postgres
+    environment:
+      POSTGRES_DB: ${PGDATABASE:-olist_analytics}
+      POSTGRES_USER: ${PGUSER:-postgres}
+      POSTGRES_PASSWORD: ${PGPASSWORD:-postgres}
+    ports:
+      - "${PGPORT:-5432}:5432"
+    volumes:
+      - olist_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-postgres} -d ${PGDATABASE:-olist_analytics}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  olist_pgdata:

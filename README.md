@@ -1,335 +1,213 @@
-# Olist Business Intelligence — E-Commerce Analytics Platform
+# Olist E-Commerce Analytics & BI
 
-End-to-end Business Intelligence project built on the Brazilian Olist e-commerce dataset.
+**A reproducible sales-analytics stack — from 1.5 million raw rows to reconciled KPIs, a Power BI executive dashboard and a client-ready web demo.**
 
-The solution combines Python EDA, PostgreSQL data modeling, advanced SQL, a fan-out-safe analytical model, DAX, and a completed six-page Power BI dashboard.
+Built on the public [Olist Brazilian e-commerce dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) (99,441 orders, 2016–2018). Independent portfolio project; not commissioned by or affiliated with Olist.
 
-**Tech stack:** PostgreSQL · SQL · Python · Pandas · Jupyter · Power BI · DAX
+![Web demo — executive overview](images/demo/01_executive_overview.png)
 
-![Executive Overview](images/Executive_overview.png)
+| Net revenue analysed | Valid orders | Unique customers | Avg order value | Late deliveries | Review: on-time vs late |
+|---:|---:|---:|---:|---:|---:|
+| R$ 13.49M | 98,207 | 96,096 | R$ 137.41 | 8.11% | 4.29 vs 2.57 |
 
-## What this project demonstrates
+Every figure above is produced by the SQL model and re-checked by the automated test suite ([data-quality report](reports/data_quality_report.md)).
 
-- Reproducible raw → staging → analytics → reporting SQL pipeline
-- Data-quality profiling and documented edge cases
-- Separate fact grains that prevent item/payment fan-out
-- Business KPI definitions reconciled between SQL and DAX
-- Power BI semantic modeling and time intelligence
-- Statistical validation of the delivery/satisfaction relationship
-- Business recommendations grounded in observed evidence
+---
 
-## Executive findings
+## The business problem
 
-- On-time orders average about **4.29** in review score versus **2.57** for late deliveries when the comparison is restricted to orders with valid delivery dates.
-- Repeat customers represent only **3.12%** of the customer base, but generate more revenue per customer than one-time buyers.
-- Revenue is geographically concentrated, led by São Paulo, while delivery performance and customer satisfaction vary materially across regions and states.
+An online marketplace generates data in many disconnected tables: orders, items, payments, reviews, sellers, products, locations. Answering simple management questions — *How much are we really selling? Which categories and sellers drive revenue? Where does delivery fail, and does it cost us customer satisfaction?* — requires joining them correctly. Done naively, multi-item and multi-payment orders double-count revenue, canceled orders inflate sales, and the same customer appears as thousands of "new" ones.
+
+## The solution
+
+1. **PostgreSQL warehouse** with `raw → staging → analytics → reporting` layers, typed columns and PK/FK/CHECK constraints.
+2. **Star schema** — 5 dimensions and 3 fact tables at order, item and payment grain, so revenue is never multiplied by joins.
+3. **Python pipeline** — one command rebuilds the whole warehouse in a single transaction (≈30 s), idempotently.
+4. **Automated data quality** — 42 checks (keys, nulls, dates, money, cross-grain revenue reconciliation) plus 40 pytest tests on a hand-checkable fixture dataset.
+5. **Power BI** — six-page executive dashboard on the star schema with a documented DAX measure library.
+6. **Web demo (Streamlit)** — a guided, filterable version for clients who do not use Power BI, reconciled to the SQL KPIs.
+
+## Key findings
+
+- **Late delivery is strongly associated with poor reviews.** On-time orders average **4.29/5**; late ones **2.57/5**. 15+ days late, 76% of reviews are 1–2 stars.
+- **Delivery breaks during demand peaks.** The late rate rose from ~3–5% in mid-2017 to **14.3%** in Nov 2017 (Black Friday) and **21.4%** in Mar 2018.
+- **Revenue is geographically concentrated:** São Paulo state is **38.3%** of net revenue; the North-East has the worst delivery (Alagoas 24.0% late, avg review 3.76).
+- **Seller revenue is concentrated:** the top 10% of sellers generate **67.4%** of net revenue. **44** sellers with 30+ orders combine >10% late deliveries with an average review below 3.8 — a short, actionable list.
+- **Growth:** Jan–Aug 2018 net revenue was **+138.3%** vs Jan–Aug 2017; repeat customers are only **3.12%** of the base.
+
+Details and recommendations: [business insights](insights/business_insights.md) · [recommendations](insights/recommendations.md).
 
 ## Architecture
 
-```text
-Raw Olist CSVs
-   ↓
-Python / Jupyter EDA
-   ↓
-PostgreSQL raw schema
-   ↓
-Data-quality checks + staging
-   ↓
-Analytics schema: 5 dimensions + 3 fact tables
-   ↓
-Reporting views / business queries
-   ↓
-Power BI semantic model + DAX
-   ↓
-6-page dashboard + business insights
+```mermaid
+flowchart LR
+    A[9 Olist CSV files<br/>1.55M rows] -->|python -m olist_bi build| B[(raw<br/>typed + constrained)]
+    B --> C[(staging<br/>cleaning, flags,<br/>ZIP aggregation)]
+    C --> D[(analytics<br/>5 dims + 3 facts)]
+    D --> E[(reporting<br/>validated views)]
+    D -->|42 checks| Q[Data-quality report]
+    D -->|Import| P[Power BI<br/>6-page dashboard]
+    D -->|python -m olist_bi export| X[Parquet aggregates] --> S[Streamlit demo]
 ```
 
-## Dataset
+### Star schema
 
-The project uses the [Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce).
-
-The repository includes the **9 original CSV files** under:
-
-```text
-data/raw/
+```mermaid
+erDiagram
+    dim_date ||--o{ fact_orders : order_date_key
+    dim_date ||--o{ fact_order_items : order_date_key
+    dim_date ||--o{ fact_payments : order_date_key
+    dim_customer ||--o{ fact_orders : customer_unique_id
+    dim_customer ||--o{ fact_order_items : customer_unique_id
+    dim_customer ||--o{ fact_payments : customer_unique_id
+    dim_geography ||--o{ dim_customer : zip_code_prefix
+    dim_product ||--o{ fact_order_items : product_id
+    dim_seller ||--o{ fact_order_items : seller_id
+    fact_orders {
+        char order_id PK
+        numeric items_revenue
+        numeric freight_total
+        numeric payments_total
+        numeric delivery_days
+        bool is_late
+        numeric avg_review_score
+    }
+    fact_order_items {
+        char order_id PK
+        int order_item_id PK
+        numeric price
+        numeric freight_value
+    }
+    fact_payments {
+        char order_id PK
+        int payment_sequential PK
+        text payment_type
+        numeric payment_value
+    }
 ```
 
-The data contains real, anonymized commercial activity from Olist Store and covers orders placed between **2016-09-04 and 2018-10-17**.
+| Table | Grain | Used for |
+|---|---|---|
+| `fact_orders` | one order | revenue, orders, AOV, delivery, reviews (revenue pre-aggregated per order) |
+| `fact_order_items` | one item in an order | category, product and seller breakdowns |
+| `fact_payments` | one payment transaction | payment method and installments |
+| `dim_customer` | one real person (`customer_unique_id`) | repeat behaviour, customer geography (latest address) |
+| `dim_geography` | one ZIP prefix | customer region/state (seller geography comes from `dim_seller`) |
 
-The first months of 2016 and the final months of 2018 contain limited activity. For time-series analysis, the project therefore uses the reliable complete-month window:
+More: [star schema design](docs/star_schema_design.md) · [KPI definitions](docs/kpi_definitions.md) · [data-quality notes](docs/data_quality_notes.md).
 
-**2017-01 through 2018-08**
+## Metric definitions
 
-See [Data quality notes](docs/data_quality_notes.md) for the detailed temporal-quality assessment.
+- **Net revenue** = sum of item prices on orders not `canceled` / `unavailable` (freight excluded).
+- **Orders / AOV** use the same valid-order population.
+- **Late delivery** = delivered after the estimated delivery timestamp, among delivered orders with valid dates.
+- **Customers** = distinct `customer_unique_id` (96,096 in the dataset; 94,990 have at least one valid order).
 
-### Raw files
+## Data quality and validation
 
-| File | Rows | Grain |
-|---|---:|---|
-| `olist_orders_dataset.csv` | 99,441 | 1 order |
-| `olist_order_items_dataset.csv` | 112,650 | 1 item within an order |
-| `olist_order_payments_dataset.csv` | 103,886 | 1 payment transaction within an order |
-| `olist_order_reviews_dataset.csv` | 99,224 | 1 review of an order |
-| `olist_customers_dataset.csv` | 99,441 | 1 order-level customer ID |
-| `olist_products_dataset.csv` | 32,951 | 1 product |
-| `olist_sellers_dataset.csv` | 3,095 | 1 seller |
-| `olist_geolocation_dataset.csv` | 1,000,163 | 1 geolocation sample per ZIP-code prefix |
-| `product_category_name_translation.csv` | 71 | 1 category translation |
+`python -m olist_bi check` runs 42 checks and fails on any error-level violation. Current result on the full dataset: **38 passed, 4 warnings, 0 failed** — the warnings are known source-data characteristics (268 customers with a ZIP missing from the geolocation file, 23 deliveries recorded before carrier pickup, 9 zero-value payments, 8 valid orders without items).
 
-### Customer identity
+Highlights:
 
-The Olist dataset contains two different customer identifiers:
+- Gross revenue, freight and payments in the fact tables equal the raw sources **to the cent** (no fan-out).
+- Net revenue reconciles across order grain, item grain and every reporting view (category, seller, geography, executive).
+- `pytest` builds the warehouse from a tiny fixture dataset where every expected value is computed by hand, including a 2-item / 2-payment order, canceled and unavailable orders, impossible delivery dates and a repeat customer who moved state, and checks that a rebuild is idempotent.
 
-- `customer_id` — order-level customer identifier
-- `customer_unique_id` — persistent customer identity across orders
+An independent review of the project, including open issues, is in the [technical audit](docs/TECHNICAL_AUDIT.md).
 
-All customer-level metrics in this project use `customer_unique_id`.
+## Reproduce it
 
-## Data model
+Requirements: Python 3.11+, PostgreSQL 14+ (local install or Docker).
 
-### Dimensions
+```bash
+python -m venv .venv
+.venv\Scripts\activate            # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env              # set PGHOST / PGUSER / PGPASSWORD / PGDATABASE
+```
 
-- `dim_date`
-- `dim_geography` — customer/shipping geography
-- `dim_customer`
-- `dim_seller`
-- `dim_product`
+Start PostgreSQL (skip if you already have one) and create the database:
 
-### Facts
+```bash
+docker compose up -d db           # or: createdb olist_analytics
+```
 
-- `fact_orders` — one row per order
-- `fact_order_items` — one row per `(order_id, order_item_id)`
-- `fact_payments` — one row per `(order_id, payment_sequential)`
+Build, validate and export:
 
-The different fact grains are deliberate.
+```bash
+python -m olist_bi build                                      # raw → staging → analytics → reporting (~30 s)
+python -m olist_bi check --report reports/data_quality_report.md
+python -m olist_bi export                                     # refreshes demo/data/*.parquet
+```
 
-One order can contain multiple items and multiple payment transactions. A naive item × payment join would multiply rows and silently overstate revenue, freight, and payment metrics.
+Tests (integration tests need a **separate** database whose name contains `test`; they drop and rebuild schemas):
 
-The semantic model therefore keeps order-, item-, and payment-level facts separate.
+```bash
+createdb olist_test
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/olist_test pytest
+```
 
-## Headline KPI references
+The individual SQL files still run in order with `psql` (see `sql/00_reset` … `sql/06_reporting_views`) for anyone who prefers to step through them manually.
 
-| KPI | Reference value |
-|---|---:|
-| Net Revenue | R$ 13,494,400.74 |
-| Gross Revenue | R$ 13,591,643.70 |
-| Valid Orders (excl. canceled/unavailable) | 98,207 |
-| Customers (`customer_unique_id`) | 96,096 |
-| AOV | R$ 137.41 |
-| Freight as % of Net Revenue | ~16.61% |
-| Repeat Customer Rate | 3.12% |
-| Avg Review Score | ~4.09 / 5 |
-| Late Delivery Rate | ~8.11% |
+## Web demo
 
-Dashboard cards can differ slightly where a page is intentionally filtered to the **Jan 2017 – Aug 2018** analysis window.
+```bash
+streamlit run demo/app.py
+```
+
+The demo needs no database: it reads small additive aggregates (`demo/data/`, < 1 MB) exported from the warehouse, so every filter combination reproduces the SQL definitions. It has five views — executive overview, sales performance, delivery & satisfaction, insights with a suggested weekly KPI scorecard, and a reconciliation page comparing its numbers with SQL.
+
+Deploying publicly (Streamlit Community Cloud, free): point a new app at this repository with main file `demo/app.py`; dependencies are in `demo/requirements.txt`.
+
+| Sales performance | Delivery & satisfaction |
+|---|---|
+| ![Sales performance](images/demo/02_sales_performance.png) | ![Delivery and satisfaction](images/demo/03_delivery_satisfaction.png) |
 
 ## Power BI dashboard
 
-The completed Power BI report is included in the repository:
+[`powerbi/olist_business_intelligence.pbix`](powerbi/olist_business_intelligence.pbix) — Import mode on the `analytics` star schema. Pages: Executive Overview, Sales Performance, Customer Analytics, Product & Category Performance, Seller Performance, Delivery & Customer Satisfaction.
 
-[Open / download the Power BI report](powerbi/olist_business_intelligence.pbix)
+| Executive overview | Delivery & satisfaction |
+|---|---|
+| ![Executive overview](images/Executive_overview.png) | ![Delivery](images/Delivery_%26_Customer_Satisfaction.png) |
 
-### Dashboard pages
+More pages: [sales](images/Sales_performance.png) · [customers](images/Customer_analytics.png) · [products](images/Product_%26_Category_Performance.png) · [sellers](images/Seller_performance.png). Model and connection guide: [powerbi/README.md](powerbi/README.md); measures: [dax_measures.md](powerbi/dax_measures.md).
 
-1. **Executive Overview**
-2. **Sales Performance**
-3. **Customer Analytics**
-4. **Product & Category Performance**
-5. **Seller Performance**
-6. **Delivery & Customer Satisfaction**
+> The current `.pbix` has older versions of a few measures (review on-time/late, freight, item revenue) than the documented library — e.g. the delivery page shows 4.22 instead of 4.29 for on-time reviews. Verified corrections are in [`powerbi/measure_fixes.dax`](powerbi/measure_fixes.dax).
 
-### Screenshots
+## Tech stack
 
-#### Sales Performance
+PostgreSQL · SQL (CTEs, window functions, constraints) · Python (psycopg, pandas, pytest) · Power BI / DAX · Streamlit / Plotly · Docker Compose · GitHub Actions
 
-![Sales Performance](images/Sales_performance.png)
-
-#### Customer Analytics
-
-![Customer Analytics](images/Customer_analytics.png)
-
-#### Product & Category Performance
-
-![Product & Category Performance](images/Product_%26_Category_Performance.png)
-
-#### Seller Performance
-
-![Seller Performance](images/Seller_performance.png)
-
-#### Delivery & Customer Satisfaction
-
-![Delivery & Customer Satisfaction](images/Delivery_%26_Customer_Satisfaction.png)
-
-Additional Power BI documentation:
-
-- [Power BI model and connection setup](powerbi/README.md)
-- [DAX measures](powerbi/dax_measures.md)
-
-## SQL and analysis layers
-
-The PostgreSQL pipeline is organized into separate layers:
-
-- `sql/01_schema/` — schemas and raw tables
-- `sql/02_data_quality/` — row counts, null checks, duplicates, referential checks
-- `sql/03_cleaning/` — staging and cleaning logic
-- `sql/04_dimensions/` — analytical dimensions
-- `sql/05_facts/` — analytical fact tables
-- `sql/06_reporting_views/` — validated reporting views
-- `sql/07_business_queries/` — business analysis queries
-
-The exploratory notebook is available at:
-
-[`notebooks/01_exploratory_data_analysis.ipynb`](notebooks/01_exploratory_data_analysis.ipynb)
-
-The notebook is intentionally used as an independent exploration and validation layer rather than as a second production transformation pipeline.
-
-PostgreSQL remains the reproducible transformation, modeling, and reporting source of truth.
-
-## Reproduce locally
-
-### Requirements
-
-- PostgreSQL
-- Python
-- Jupyter Notebook
-- Power BI Desktop
-
-Python dependencies are listed in:
-
-[`requirements.txt`](requirements.txt)
-
-The required raw CSV files are already included under:
+## Repository layout
 
 ```text
-data/raw/
+olist_bi/            Python pipeline: config, build, quality checks, demo export, CLI
+sql/                 00_reset · 01_schema · 02_data_quality (profiling) · 03_cleaning
+                     04_dimensions · 05_facts · 06_reporting_views · 07_business_queries
+tests/               unit, fixture-based integration, demo-data and demo-app tests
+demo/                Streamlit app + exported aggregates
+powerbi/             .pbix, DAX library, measure fixes, model guide
+docs/                audit, case study, schema, KPI and data-quality notes
+insights/            business insights and recommendations
+notebooks/           exploratory analysis (pandas)
+reports/             generated data-quality report
+data/raw/            the 9 original Olist CSV files
 ```
 
-Run the following commands from the repository root.
+## Limitations
 
-### 1. Create the database
+- Public, anonymized data with no costs or margins: profitability cannot be analysed.
+- Delay-vs-review results are observational associations, not causal estimates.
+- Sep–Dec 2016 and Sep–Oct 2018 are partial months; trend views default to Jan 2017 – Aug 2018.
+- Customer geography uses each customer's most recent address.
 
-```powershell
-createdb olist_analytics
-```
+## Author
 
-### 2. Create schemas and raw tables
+Built by **Alejandro Cotes** — Business Intelligence & data analytics (Python, SQL, PostgreSQL, Power BI). GitHub: [@AC020907](https://github.com/AC020907).
 
-```powershell
-psql -U postgres -d olist_analytics -f sql/01_schema/01_create_schemas.sql
-psql -U postgres -d olist_analytics -f sql/01_schema/02_create_raw_tables.sql
-```
-
-### 3. Load raw data
-
-```powershell
-psql -U postgres -d olist_analytics -f scripts/load_raw_data.sql
-```
-
-### 4. Build the staging layer
-
-```powershell
-psql -U postgres -d olist_analytics -f sql/03_cleaning/01_staging_products.sql
-psql -U postgres -d olist_analytics -f sql/03_cleaning/02_staging_geolocation.sql
-psql -U postgres -d olist_analytics -f sql/03_cleaning/03_staging_orders.sql
-```
-
-### 5. Build dimensions
-
-Execute the scripts in filename order from:
-
-```text
-sql/04_dimensions/
-```
-
-### 6. Build fact tables
-
-Execute the scripts in filename order from:
-
-```text
-sql/05_facts/
-```
-
-### 7. Build reporting views
-
-Execute the scripts in filename order from:
-
-```text
-sql/06_reporting_views/
-```
-
-### 8. Optional validation and business analysis
-
-Data-quality checks:
-
-```text
-sql/02_data_quality/
-```
-
-Business analysis:
-
-```text
-sql/07_business_queries/
-```
-
-The review dataset contains UTF-8 characters that may fail under a Windows-1252 PostgreSQL client configuration.
-
-`scripts/load_raw_data.sql` explicitly sets the client encoding to UTF-8 before loading the data.
-
-## Repository structure
-
-```text
-.
-├── README.md
-├── LICENSE
-├── requirements.txt
-├── data/
-│   ├── raw/              # 9 original Olist CSV files
-│   └── README.md
-├── notebooks/
-│   └── 01_exploratory_data_analysis.ipynb
-├── sql/
-│   ├── 01_schema/
-│   ├── 02_data_quality/
-│   ├── 03_cleaning/
-│   ├── 04_dimensions/
-│   ├── 05_facts/
-│   ├── 06_reporting_views/
-│   └── 07_business_queries/
-├── scripts/
-├── docs/
-├── insights/
-├── images/
-└── powerbi/
-    ├── README.md
-    ├── dax_measures.md
-    └── olist_business_intelligence.pbix
-```
-
-## Important modeling conventions
-
-- Use `customer_unique_id` for customer-level metrics.
-- Net revenue excludes `canceled` and `unavailable` orders.
-- Product/category analysis uses `fact_order_items`.
-- Seller analysis uses `fact_order_items`.
-- Payment analysis uses `fact_payments`.
-- `dim_geography` represents customer geography only.
-- Seller geography comes directly from `dim_seller`.
-- On-time vs late satisfaction comparisons use only orders with valid delivery dates.
-- Avoid fact-to-fact relationships.
-- Avoid row-level item/payment joins that would create fan-out.
-- Category and seller revenue use the same net-order filtering logic as the main revenue KPI.
-
-## Documentation
-
-- [Data README](data/README.md)
-- [Data quality notes](docs/data_quality_notes.md)
-- [Star schema design](docs/star_schema_design.md)
-- [KPI definitions](docs/kpi_definitions.md)
-- [Business insights](insights/business_insights.md)
-- [Recommendations](insights/recommendations.md)
-- [Power BI model documentation](powerbi/README.md)
-- [DAX measures](powerbi/dax_measures.md)
+Case study: [docs/CASE_STUDY.md](docs/CASE_STUDY.md).
 
 ## License
 
-This project is distributed under the terms described in [LICENSE](LICENSE).
+Code: [MIT](LICENSE). The Olist dataset is published by Olist on Kaggle under CC BY-NC-SA 4.0 (non-commercial, attribution, share-alike); it is used here only as a public sample for a portfolio project.

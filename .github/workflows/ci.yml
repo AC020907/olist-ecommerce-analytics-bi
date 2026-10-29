@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: olist_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/olist_test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/olist_analytics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install pipeline dependencies
+        run: pip install "psycopg[binary]==3.3.6" python-dotenv==1.2.4 pandas==3.1.0 pyarrow==26.0.0 pytest==9.2.0
+      - name: Unit, fixture-integration and demo-data tests
+        run: pytest -v
+      - name: Full build on the real dataset + data-quality gate
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE olist_analytics"
+          python -m olist_bi build
+          python -m olist_bi check
