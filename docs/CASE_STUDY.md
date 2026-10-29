@@ -3,7 +3,7 @@
 *Independent portfolio project on the public Olist dataset (Brazil, 2016–2018). Olist did not commission or review this work; no results below were delivered to or measured at a real company.*
 
 **Stack:** Python · PostgreSQL · SQL · Power BI / DAX · Streamlit · pytest · Docker Compose · GitHub Actions
-**Code:** [github.com/AC020907/olist-ecommerce-analytics-bi](https://github.com/AC020907/olist-ecommerce-analytics-bi)
+**Live app:** [olist-sales-analytics.streamlit.app](https://olist-sales-analytics.streamlit.app) · **Code:** [github.com/AC020907/olist-ecommerce-analytics-bi](https://github.com/AC020907/olist-ecommerce-analytics-bi)
 
 ---
 

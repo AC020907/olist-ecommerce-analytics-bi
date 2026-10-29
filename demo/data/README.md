@@ -9,8 +9,10 @@ non-commercial use only, derivatives under the same terms.
 | File | Grain |
 |---|---|
 | `orders.parquet` | month × customer state × valid/invalid order status |
-| `categories.parquet` | month × customer state × product category (valid orders) |
+| `categories.parquet` | month × customer state × product category (valid orders; item totals + outcomes of the distinct orders containing the category) |
+| `category_delivery_buckets.parquet` | month × customer state × category × calendar days late |
 | `sellers.parquet` | seller × month × customer state (valid orders) |
 | `delivery_buckets.parquet` | month × customer state × calendar days late |
 | `kpi_reference.json` | `reporting.vw_executive_summary` at export time |
 | `export_metadata.json` | order date range and export date |
+| `quality_summary.json` | results of the 44 data-quality checks at export time |

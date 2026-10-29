@@ -14,13 +14,14 @@ from pathlib import Path
 import pandas as pd
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
-TABLES = ("orders", "categories", "sellers", "delivery_buckets")
+TABLES = ("orders", "categories", "category_delivery_buckets", "sellers", "delivery_buckets")
 ANALYSIS_WINDOW = ("2017-01", "2018-08")
 
 
 def load_frames(data_dir: Path = DATA_DIR) -> dict[str, pd.DataFrame]:
     frames = {name: pd.read_parquet(data_dir / f"{name}.parquet") for name in TABLES}
-    frames["categories"]["category"] = frames["categories"]["category"].str.replace("_", " ")
+    for name in ("categories", "category_delivery_buckets"):
+        frames[name]["category"] = frames[name]["category"].str.replace("_", " ")
     return frames
 
 
@@ -62,6 +63,43 @@ def kpis(orders: pd.DataFrame) -> dict[str, float]:
         "late_pct": 100 * ratio(orders["late_orders"].sum(), orders["valid_delivery_orders"].sum()),
         "delivery_days": ratio(orders["delivery_days_sum"].sum(), orders["delivery_days_n"].sum()),
     }
+
+
+def category_kpis(categories: pd.DataFrame) -> dict[str, float]:
+    """KPIs for orders containing ONE category (valid orders only).
+
+    Only valid for a single category: an order with items in two categories would be
+    counted once per category, so callers must not sum this across categories.
+    """
+    if categories["category"].nunique() > 1:
+        raise ValueError("category_kpis expects rows for a single category")
+    return {
+        "revenue": float(categories["revenue"].sum()),
+        "orders": int(categories["orders"].sum()),
+        "items": int(categories["items"].sum()),
+        "aov": ratio(categories["revenue"].sum(), categories["orders"].sum()),
+        "review": ratio(categories["review_sum"].sum(), categories["review_n"].sum()),
+        "late_orders": int(categories["late_orders"].sum()),
+        "late_pct": 100 * ratio(categories["late_orders"].sum(), categories["valid_delivery_orders"].sum()),
+        "delivery_days": ratio(categories["delivery_days_sum"].sum(), categories["delivery_days_n"].sum()),
+    }
+
+
+def seller_profile(sellers: pd.DataFrame, seller_id: str) -> tuple[dict[str, float], pd.DataFrame]:
+    rows = sellers[sellers["seller_id"] == seller_id]
+    monthly = rows.groupby("year_month", as_index=False)[
+        ["revenue", "orders", "late_orders", "valid_delivery_orders", "review_sum", "review_n"]
+    ].sum()
+    summary = {
+        "revenue": float(rows["revenue"].sum()),
+        "orders": int(rows["orders"].sum()),
+        "items": int(rows["items"].sum()),
+        "late_pct": 100 * ratio(rows["late_orders"].sum(), rows["valid_delivery_orders"].sum()),
+        "review": ratio(rows["review_sum"].sum(), rows["review_n"].sum()),
+        "delivery_days": ratio(rows["delivery_days_sum"].sum(), rows["delivery_days_n"].sum()),
+        "customer_states": int(rows["customer_state"].nunique()),
+    }
+    return summary, monthly
 
 
 def category_table(categories: pd.DataFrame) -> pd.DataFrame:

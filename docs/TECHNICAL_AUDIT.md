@@ -104,7 +104,7 @@ connection detail (`localhost`, user `postgres`) is generic documentation.
 | A-01 | On-time review measure counted blank `is_late` as on-time | DAX now uses strict `==`; saved in the `.pbix` | DAX 4.2947 = SQL on the same data; `powerbi/measure_fixes.dax` | Fixed |
 | A-02 | Freight / item / seller measures included canceled orders | Valid-order filters added to 6 measures (+ `Avg Items per Order`, A-16) | DAX = SQL to the cent (`KPI_RECONCILIATION.md` §2) | Fixed |
 | A-03 | Pipeline not re-runnable | `sql/00_reset` + transactional Python build | CI builds twice; `test_rebuild_is_idempotent` | Fixed |
-| A-04 | No tests / quality gate | 44 checks, 57 tests, CI | `reports/data_quality_report.md`, CI runs | Fixed |
+| A-04 | No tests / quality gate | 44 checks, 64 tests, E2E on the live app, CI | `reports/data_quality_report.md`, CI runs | Fixed |
 | A-05 | CV mixed customer populations | Wording corrected everywhere | `docs/CAREER_MATERIALS.md` | Fixed |
 | A-06 | Repeat rate population undocumented | Documented (3.12% all statuses / 3.04% valid only) | `KPI_RECONCILIATION.md` §1 | Documented |
 | A-07 | Late rule flagged same-day deliveries as late | `is_late` compares calendar dates (all promised dates are at 00:00) | checks `late_flag_uses_calendar_dates`, `promised_date_is_calendar_date`; test `test_delivery_on_promised_day_is_on_time` | **Fixed — late rate 8.11% → 6.77%, late review 2.57 → 2.27** |
