@@ -41,7 +41,7 @@ st.markdown(
 .insight p {margin: 0; color: #303030; font-size: .93rem;}
 .insight .label {color: #52514e; font-weight: 600;}
 @media (max-width: 640px) {
-  .block-container {padding-left: 1rem; padding-right: 1rem;}
+  .block-container {padding-left: 1rem; padding-right: 1rem; padding-top: 3.5rem;}
   h1 {font-size: 1.7rem !important;}
 }
 </style>
