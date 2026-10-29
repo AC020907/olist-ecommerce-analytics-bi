@@ -1,10 +1,9 @@
 # DAX Measure Library
 
-> **Known gap (audit 2026-10-29):** this library is the intended definition. The
-> committed `.pbix` still has older versions of `Avg Review Score On-Time/Late`,
-> `Total Freight`, `Item Revenue`, `Items Sold`, `Avg Item Price` and
-> `Seller Revenue`. Corrected, verified expressions: [`measure_fixes.dax`](measure_fixes.dax);
-> details in [docs/TECHNICAL_AUDIT.md](../docs/TECHNICAL_AUDIT.md) (A-01, A-02).
+> **Synced with the `.pbix` on 2026-10-29.** Nine measures that had drifted from
+> these definitions were corrected in the model and verified against SQL
+> (change log: [`measure_fixes.dax`](measure_fixes.dax); evidence:
+> [docs/KPI_RECONCILIATION.md](../docs/KPI_RECONCILIATION.md)).
 
 This file documents the semantic-layer calculations used by the Power BI
 report. Table names match the imported model. All measures should live in a
@@ -99,11 +98,11 @@ Late Delivery % =
 DIVIDE(
     CALCULATE(
         COUNTROWS('analytics fact_orders'),
-        'analytics fact_orders'[is_late] = TRUE()
+        'analytics fact_orders'[is_late] == TRUE()
     ),
     CALCULATE(
         COUNTROWS('analytics fact_orders'),
-        'analytics fact_orders'[has_valid_delivery_dates] = TRUE()
+        NOT ISBLANK('analytics fact_orders'[is_late])
     )
 )
 
@@ -113,21 +112,20 @@ AVERAGE('analytics fact_orders'[avg_review_score])
 Avg Review Score On-Time =
 CALCULATE(
     [Avg Review Score],
-    'analytics fact_orders'[has_valid_delivery_dates] = TRUE(),
-    'analytics fact_orders'[is_late] = FALSE()
+    'analytics fact_orders'[is_late] == FALSE()
 )
 
 Avg Review Score Late =
 CALCULATE(
     [Avg Review Score],
-    'analytics fact_orders'[has_valid_delivery_dates] = TRUE(),
-    'analytics fact_orders'[is_late] = TRUE()
+    'analytics fact_orders'[is_late] == TRUE()
 )
 ```
 
-The explicit valid-date filter on the on-time measure is important. Orders with
-`is_late = BLANK()` must not be silently treated as on-time. SQL/notebook
-reference values are approximately **4.29 on-time vs 2.57 late**.
+`is_late` is BLANK when an order has no measurable delivery (not delivered, or
+impossible dates). DAX treats `BLANK() = FALSE()` as TRUE, so the strict `==`
+operator keeps those orders out of the on-time average and the late-rate
+denominator. Reference values: **4.29 on-time vs 2.27 late**, 6.77% late.
 
 ## Customer measures
 
@@ -349,10 +347,10 @@ Use SQL reporting views as reference answers. Important full-dataset checks:
 - Total Customers: **96,096**
 - AOV: **R$ 137.41**
 - Avg Review Score: **4.09**
-- Late Delivery Rate: **~8.11%**
+- Late Delivery Rate: **6.77%** (calendar-date rule)
 - Repeat Customer Rate: **3.12%**
-- Avg Review Score On-Time: **~4.29**
-- Avg Review Score Late: **~2.57**
+- Avg Review Score On-Time: **4.29**
+- Avg Review Score Late: **2.27**
 - Revenue YTD at Aug-2018: **R$ 7,341,037.41**
 - Jan-Aug 2018 vs Jan-Aug 2017 comparable YoY: **~138.3%**
 

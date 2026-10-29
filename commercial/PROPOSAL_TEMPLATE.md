@@ -13,7 +13,7 @@ How I'd approach it:
 2. Clean and model the data so totals reconcile with [a number they trust].
 3. Build [N pages: list them] in Power BI, with [refresh method].
 
-Similar work: I built an end-to-end sales analytics project on a public e-commerce dataset (99k orders) — PostgreSQL model, 42 automated data checks and a Power BI dashboard: https://github.com/AC020907/olist-ecommerce-analytics-bi
+Similar work: I built an end-to-end sales analytics project on a public e-commerce dataset (99k orders) — PostgreSQL model, 44 automated data checks and a Power BI dashboard: https://github.com/AC020907/olist-ecommerce-analytics-bi
 
 Proposed: [package / fixed price] · first version in [X] days after receiving the data.
 

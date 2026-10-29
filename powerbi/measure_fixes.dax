@@ -1,43 +1,63 @@
 // =============================================================================
-// measure_fixes.dax -- corrections for docs/TECHNICAL_AUDIT.md findings A-01, A-02
+// measure_fixes.dax -- change log for docs/TECHNICAL_AUDIT.md findings A-01, A-02, A-08
 //
-// The committed olist_business_intelligence.pbix diverges from the documented
-// definitions in docs/kpi_definitions.md for the measures below. Replace each
-// measure's expression in Power BI Desktop (Modeling > select measure > formula
-// bar), then save the .pbix and refresh the page screenshots.
+// Applied to olist_business_intelligence.pbix on 2026-10-29 through the Power BI
+// modeling MCP server (Tabular Object Model) and saved from Power BI Desktop.
+// These are the exact expressions now stored in the model's _Measures table.
 //
-// Verified 2026-10-29 by evaluating these exact expressions as query-scoped
-// measures against the committed model (no changes saved):
-//   Avg Review Score On-Time   4.2945   (model today: 4.2148)  SQL: 4.29
-//   Avg Review Score Late      2.5662   (unchanged)            SQL: 2.57
-//   Total Freight              2,241,126.29 (today: 2,251,909.54)  SQL: 2,241,126.29
-//   Freight % of Revenue       16.61%   (today: 16.69%)
-//   Item Revenue / Seller Rev. 13,494,400.74 (today: gross 13,591,643.70) = Net Revenue
-//   Items Sold                 112,101
+// Before -> after, full dataset (data imported under the calendar-date late rule):
+//   Avg Review Score On-Time   4.2148 -> 4.29   (BLANK() = FALSE() counted 2,873 orders
+//                                                without a delivery outcome as on-time)
+//   Avg Review Score Late      2.5662 -> 2.27   (late rule now compares calendar dates)
+//   Late Delivery %            8.11%  -> 6.77%  (rule + denominator = measurable deliveries)
+//   Total Freight              2,251,909.54 -> 2,241,126.29 (valid orders only)
+//   Freight % of Revenue       16.69% -> 16.61%
+//   Item Revenue/Seller Rev.   13,591,643.70 -> 13,494,400.74 (= Net Revenue)
+//   Items Sold                 112,650 -> 112,101
+//   Avg Items per Order        1.147  -> 1.141  (numerator was all statuses)
 // =============================================================================
 
-// A-01 -- BLANK() = FALSE() is TRUE in DAX, so without the valid-date predicate
-// every order without a delivery outcome is counted as "on-time".
 Avg Review Score On-Time =
+// Strict == so orders without a delivery outcome (is_late BLANK) are not counted as on-time.
 CALCULATE(
     [Avg Review Score],
-    'analytics fact_orders'[has_valid_delivery_dates] = TRUE(),
-    'analytics fact_orders'[is_late] = FALSE()
+    'analytics fact_orders'[is_late] == FALSE()
 )
 
 Avg Review Score Late =
 CALCULATE(
     [Avg Review Score],
-    'analytics fact_orders'[has_valid_delivery_dates] = TRUE(),
-    'analytics fact_orders'[is_late] = TRUE()
+    'analytics fact_orders'[is_late] == TRUE()
 )
 
-// A-02 -- same valid-order population as [Total Revenue].
+Late Delivery % =
+// Denominator: delivered orders with valid dates (is_late not blank), same as SQL.
+DIVIDE(
+    CALCULATE(
+        COUNTROWS('analytics fact_orders'),
+        'analytics fact_orders'[is_late] == TRUE()
+    ),
+    CALCULATE(
+        COUNTROWS('analytics fact_orders'),
+        NOT ISBLANK('analytics fact_orders'[is_late])
+    )
+)
+
 Total Freight =
 CALCULATE(
     SUM('analytics fact_orders'[freight_total]),
     'analytics fact_orders'[order_status] <> "canceled",
     'analytics fact_orders'[order_status] <> "unavailable"
+)
+
+Avg Items per Order =
+DIVIDE(
+    CALCULATE(
+        SUM('analytics fact_orders'[n_items]),
+        'analytics fact_orders'[order_status] <> "canceled",
+        'analytics fact_orders'[order_status] <> "unavailable"
+    ),
+    [Total Orders]
 )
 
 Item Revenue =

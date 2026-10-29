@@ -1,6 +1,6 @@
 -- Business question: ¿Existe relación entre retrasos y review scores?
 -- Real result: yes, the strongest relationship found in this project --
--- on-time orders average 4.29, late orders average 2.57 (a 1.72-point
+-- on-time orders average 4.29, late orders average 2.27 (a 2.02-point
 -- gap on a 5-point scale). See insights/business_insights.md #1.
 SELECT
     is_late,
