@@ -57,3 +57,11 @@ def test_region_filter_renders(region):
     app.multiselect[0].select(region).run()
     assert not app.exception
     assert metric(app, "Net revenue").value.startswith("R$")
+
+
+def test_empty_selection_shows_message_instead_of_failing():
+    app = run_app()
+    app.select_slider[0].set_value(("2016-09", "2016-09")).run()
+    app.multiselect[0].select("Centro-Oeste").run()  # no orders there in Sep 2016
+    assert not app.exception
+    assert any("No valid orders match" in w.value for w in app.warning)
